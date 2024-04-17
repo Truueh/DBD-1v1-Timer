@@ -39,8 +39,11 @@ private:
 		}
 		seconds = t2.wSecond - t1.wSecond;
 		seconds = (60 * minutes) + seconds;
+		if (t1.wMilliseconds < t2.wMilliseconds) {
+			seconds++;
+		}
 
-		return seconds;
+		return seconds > 0 ? seconds - 1: 0;
 	}
 
 	wstring GetTimeAsText()
@@ -239,22 +242,13 @@ private:
 
 			D2D1_SIZE_U size = D2D1::SizeU(rc.right, rc.bottom);
 
-			D2D1_RENDER_TARGET_PROPERTIES properties = D2D1::RenderTargetProperties(
-				D2D1_RENDER_TARGET_TYPE_DEFAULT,
-				D2D1::PixelFormat(),
-				0,
-				0,
-				D2D1_RENDER_TARGET_USAGE_NONE,
-				D2D1_FEATURE_LEVEL_DEFAULT
-			);
-
-			hr = pFactory->CreateHwndRenderTarget(properties, D2D1::HwndRenderTargetProperties(m_hwnd, size), &pRenderTarget);
+			hr = pFactory->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(m_hwnd, size), &pRenderTarget);
 
 			if (SUCCEEDED(hr)) {
-				const D2D1_COLOR_F greenColor = D2D1::ColorF(0.0f, 0.7f, 0);
+				const D2D1_COLOR_F greenColor = D2D1::ColorF(0.0f, 1, 0.4f);
 				hr = pRenderTarget->CreateSolidColorBrush(greenColor, &pBrushGreen);
 
-				const D2D1_COLOR_F blueColor = D2D1::ColorF(0.0f, 0.0f, 0.7f);
+				const D2D1_COLOR_F blueColor = D2D1::ColorF(0.0f, 0.6f, 1);
 				hr = pRenderTarget->CreateSolidColorBrush(blueColor, &pBrushBlue);
 			}
 		}
