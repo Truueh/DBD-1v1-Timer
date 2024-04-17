@@ -219,7 +219,8 @@ class MainWindow : public BaseWindow<MainWindow>
 	// Resources
 	ID2D1Factory* pFactory;
 	ID2D1HwndRenderTarget* pRenderTarget;
-	ID2D1SolidColorBrush* pBrush;
+	ID2D1SolidColorBrush* pBrushGreen;
+	ID2D1SolidColorBrush* pBrushBlue;
 
 	// Writing Resources
 	IDWriteFactory* pWriteFactory;
@@ -250,8 +251,11 @@ private:
 			hr = pFactory->CreateHwndRenderTarget(properties, D2D1::HwndRenderTargetProperties(m_hwnd, size), &pRenderTarget);
 
 			if (SUCCEEDED(hr)) {
-				const D2D1_COLOR_F color = D2D1::ColorF(0.0f, 0.7f, 0);
-				hr = pRenderTarget->CreateSolidColorBrush(color, &pBrush);
+				const D2D1_COLOR_F greenColor = D2D1::ColorF(0.0f, 0.7f, 0);
+				hr = pRenderTarget->CreateSolidColorBrush(greenColor, &pBrushGreen);
+
+				const D2D1_COLOR_F blueColor = D2D1::ColorF(0.0f, 0.0f, 0.7f);
+				hr = pRenderTarget->CreateSolidColorBrush(blueColor, &pBrushBlue);
 			}
 		}
 
@@ -294,7 +298,7 @@ private:
 	void DiscardGraphicsResources()
 	{
 		SafeRelease(&pRenderTarget);
-		SafeRelease(&pBrush);
+		SafeRelease(&pBrushGreen);
 		SafeRelease(&pWriteFactory);
 		SafeRelease(&pTextFormat);
 	}
@@ -311,10 +315,28 @@ private:
 			pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
 
 			D2D1_RECT_F rect1 = D2D1::RectF(0, 0, winSize[0] / 2, winSize[1]);
-			timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrush);
-
 			D2D1_RECT_F rect2 = D2D1::RectF(winSize[0] / 2, 0, winSize[0], winSize[1]);
-			timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrush);
+
+			if (activeTimer != NULL)
+			{
+				D2D1_RECT_F rect;
+
+				if (activeTimer == &timer1) {
+					rect = rect1;
+					timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushGreen);
+				}
+				else if (activeTimer == &timer2) {
+					rect = rect2;
+					timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
+				}
+
+				activeTimer->Draw(pRenderTarget, pTextFormat, rect, pBrushBlue);
+			}
+			else 
+			{
+				timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
+				timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushGreen);
+			}
 
 			hr = pRenderTarget->EndDraw();
 
@@ -355,14 +377,17 @@ public:
 				activeTimer = &timer2;
 				break;
 			case 2: // f
-				if (activeTimer->GetTimerState() == TimerState::zero) {
-					activeTimer->StartTimer();
-				}
-				else if (activeTimer->GetTimerState() == TimerState::running) {
-					activeTimer->StopTimer();
-				}
-				else {
-					activeTimer->ResetTimer();
+				if (activeTimer != NULL)
+				{
+					if (activeTimer->GetTimerState() == TimerState::zero) {
+						activeTimer->StartTimer();
+					}
+					else if (activeTimer->GetTimerState() == TimerState::running) {
+						activeTimer->StopTimer();
+					}
+					else {
+						activeTimer->ResetTimer();
+					}
 				}
 				break;
 			}
@@ -395,7 +420,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	// Create a window
 	MainWindow win;
 
-	if (!win.Create(L"Timer", 0, 0, 300, 80, WS_EX_TOPMOST, WS_POPUP)) {
+	if (!win.Create(L"Timer", 0, 0, 300, 50, WS_EX_TOPMOST, WS_POPUP)) {
 		return 0;
 	}
 
