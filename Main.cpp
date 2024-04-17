@@ -326,6 +326,8 @@ private:
 		}
 	}
 
+	Timer* activeTimer;
+
 public:
 	LPCWSTR ClassName() const { return L"Main Window"; }
 	LRESULT HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
@@ -342,33 +344,28 @@ public:
 			PostQuitMessage(0);
 			appRunning = false;
 			return 0;
-		case WM_KEYDOWN:
-			switch (wParam)
+		case WM_HOTKEY:
+			// Timer logic
+			switch ((int)wParam)
 			{
-			case VK_F1:
-				if (timer1.GetTimerState() == TimerState::zero) {
-					timer1.StartTimer();
+			case 0: // f1
+				activeTimer = &timer1;
+				break;
+			case 1: // f2
+				activeTimer = &timer2;
+				break;
+			case 2: // f
+				if (activeTimer->GetTimerState() == TimerState::zero) {
+					activeTimer->StartTimer();
 				}
-				else if (timer1.GetTimerState() == TimerState::running) {
-					timer1.StopTimer();
+				else if (activeTimer->GetTimerState() == TimerState::running) {
+					activeTimer->StopTimer();
 				}
 				else {
-					timer1.ResetTimer();
+					activeTimer->ResetTimer();
 				}
 				break;
-			case VK_F2:
-				if (timer2.GetTimerState() == TimerState::zero) {
-					timer2.StartTimer();
-				}
-				else if (timer2.GetTimerState() == TimerState::running) {
-					timer2.StopTimer();
-				}
-				else {
-					timer2.ResetTimer();
-				}
 			}
-			return 0;
-		case WM_WINDOWPOSCHANGED:
 			return 0;
 		}
 
@@ -403,6 +400,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	}
 
 	ShowWindow(win.Window(), nCmdShow);
+
+	// Listen for keys: F1, F2, F While running in the background
+	RegisterHotKey(win.Window(),0,MOD_NOREPEAT,VK_F1);
+	RegisterHotKey(win.Window(),1,MOD_NOREPEAT,VK_F2);
+	RegisterHotKey(win.Window(),2,MOD_NOREPEAT,	0x46);
 
 	thread t1(AppLoop, &win);
 
