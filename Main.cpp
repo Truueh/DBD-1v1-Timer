@@ -221,7 +221,7 @@ class MainWindow : public BaseWindow<MainWindow>
 {
 	// Resources
 	ID2D1Factory* pFactory;
-	ID2D1HwndRenderTarget* pRenderTarget;
+	ID2D1HwndRenderTarget* pRenderTarget = 0;
 	ID2D1SolidColorBrush* pBrushGreen;
 	ID2D1SolidColorBrush* pBrushBlue;
 
@@ -230,12 +230,14 @@ class MainWindow : public BaseWindow<MainWindow>
 	IDWriteTextFormat* pTextFormat;
 
 private:
+	Timer* activeTimer;
+
 	HRESULT CreateGraphicsResources()
 	{
 		HRESULT hr = S_OK;
-
+		
 		// Set up render target and brush
-		if (pRenderTarget == NULL);
+		if (pRenderTarget == NULL)
 		{
 			RECT rc;
 			GetClientRect(m_hwnd, &rc);
@@ -253,6 +255,12 @@ private:
 			}
 		}
 
+		return hr;
+	}
+
+	HRESULT CreateDeviceIndependentResources()
+	{
+		HRESULT hr = S_OK;
 		// Set up write factory
 		if (pWriteFactory == NULL)
 		{
@@ -293,15 +301,17 @@ private:
 	{
 		SafeRelease(&pRenderTarget);
 		SafeRelease(&pBrushGreen);
+		SafeRelease(&pBrushBlue);
 		SafeRelease(&pWriteFactory);
 		SafeRelease(&pTextFormat);
 	}
 
 	void HandlePainting()
 	{
-		HRESULT hr = CreateGraphicsResources();
+		HRESULT hrGraphics = CreateGraphicsResources();
+		HRESULT hrWrite = CreateDeviceIndependentResources();
 
-		if (SUCCEEDED(hr))
+		if (SUCCEEDED(S_OK))
 		{
 			PAINTSTRUCT ps;
 			BeginPaint(m_hwnd, &ps);
@@ -311,30 +321,33 @@ private:
 			D2D1_RECT_F rect1 = D2D1::RectF(0, 0, winSize[0] / 2, winSize[1]);
 			D2D1_RECT_F rect2 = D2D1::RectF(winSize[0] / 2, 0, winSize[0], winSize[1]);
 
-			if (activeTimer != NULL)
+			if (SUCCEEDED(hrWrite))
 			{
-				D2D1_RECT_F rect;
+				if (activeTimer != NULL)
+				{
+					D2D1_RECT_F rect;
 
-				if (activeTimer == &timer1) {
-					rect = rect1;
+					if (activeTimer == &timer1) {
+						rect = rect1;
+						timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushGreen);
+					}
+					else if (activeTimer == &timer2) {
+						rect = rect2;
+						timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
+					}
+
+					activeTimer->Draw(pRenderTarget, pTextFormat, rect, pBrushBlue);
+				}
+				else
+				{
+					timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
 					timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushGreen);
 				}
-				else if (activeTimer == &timer2) {
-					rect = rect2;
-					timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
-				}
-
-				activeTimer->Draw(pRenderTarget, pTextFormat, rect, pBrushBlue);
-			}
-			else 
-			{
-				timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
-				timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushGreen);
 			}
 
-			hr = pRenderTarget->EndDraw();
+			hrGraphics = pRenderTarget->EndDraw();
 
-			if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
+			if (FAILED(hrGraphics) || hrGraphics == D2DERR_RECREATE_TARGET)
 			{
 				DiscardGraphicsResources();
 			}
@@ -342,9 +355,10 @@ private:
 		}
 	}
 
-	Timer* activeTimer;
-
 public:
+	Timer timer1 = Timer();
+	Timer timer2 = Timer();
+
 	LPCWSTR ClassName() const { return L"Main Window"; }
 	LRESULT HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 	{
@@ -371,6 +385,8 @@ public:
 				activeTimer = &timer2;
 				break;
 			case 2: // f
+			case 3: // ctrl + f
+			case 4: // shift + f
 				if (activeTimer != NULL)
 				{
 					if (activeTimer->GetTimerState() == TimerState::zero) {
@@ -390,8 +406,6 @@ public:
 
 		return DefWindowProc(Window(), wMsg, wParam, lParam);
 	}
-	Timer timer1 = Timer();
-	Timer timer2 = Timer();
 
 	void Draw() {
 		HandlePainting();
@@ -403,8 +417,8 @@ void AppLoop(MainWindow* win)
 	while (win->appRunning)
 	{
 		Sleep(1);
-		win->timer1.UpdateTime(); // only happens if the timer is running
-		win->timer2.UpdateTime(); // only happens if the timer is running
+		win->timer1.UpdateTime();
+		win->timer2.UpdateTime();
 		win->Draw();
 	}
 }
@@ -423,7 +437,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	// Listen for keys: F1, F2, F While running in the background
 	RegisterHotKey(win.Window(),0,MOD_NOREPEAT,VK_F1);
 	RegisterHotKey(win.Window(),1,MOD_NOREPEAT,VK_F2);
-	RegisterHotKey(win.Window(),2,MOD_NOREPEAT,	0x46);
+	RegisterHotKey(win.Window(), 2, MOD_NOREPEAT, 0x46);
+	RegisterHotKey(win.Window(), 3, MOD_CONTROL, 0x46);
+	RegisterHotKey(win.Window(), 4, MOD_SHIFT, 0x46);
 
 	thread t1(AppLoop, &win);
 
