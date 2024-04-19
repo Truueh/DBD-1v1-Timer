@@ -4,6 +4,7 @@
 #include <wchar.h>
 #include <thread>
 #include <dwrite.h>
+#include <windowsx.h>
 
 #pragma comment (lib, "d2d1")
 
@@ -232,6 +233,9 @@ class MainWindow : public BaseWindow<MainWindow>
 private:
 	Timer* activeTimer;
 
+	BOOL mouseDown = false;
+	int clickMousePos[2] = {0, 0};
+
 	HRESULT CreateGraphicsResources()
 	{
 		HRESULT hr = S_OK;
@@ -384,9 +388,8 @@ public:
 			case 1: // f2
 				activeTimer = &timer2;
 				break;
-			case 2: // f
-			case 3: // ctrl + f
-			case 4: // shift + f
+			case 2: // ctrl + f
+			case 3: // shift + f
 				if (activeTimer != NULL)
 				{
 					if (activeTimer->GetTimerState() == TimerState::zero) {
@@ -400,6 +403,27 @@ public:
 					}
 				}
 				break;
+			}
+			return 0;
+		case WM_LBUTTONDOWN:
+			mouseDown = true;
+			clickMousePos[0] = GET_X_LPARAM(lParam);
+			clickMousePos[1] = GET_Y_LPARAM(lParam);
+			return 0;
+		case WM_LBUTTONUP:
+			mouseDown = false;
+			return 0;
+		case WM_MOUSEMOVE:
+			if (mouseDown)
+			{
+				RECT windowPos;
+				GetWindowRect(m_hwnd, &windowPos);
+				int currPos[2] = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+
+				int xToMove = windowPos.left + (currPos[0] - clickMousePos[0]);
+				int yToMove = windowPos.top + (currPos[1] - clickMousePos[1]);
+
+				SetWindowPos(m_hwnd, NULL, xToMove, yToMove, winSize[0], winSize[1], 0);
 			}
 			return 0;
 		}
@@ -431,14 +455,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	if (!win.Create(L"Timer", 0, 0, 300, 50, WS_EX_TOPMOST, WS_POPUP)) {
 		return 0;
 	}
-
+	
 	ShowWindow(win.Window(), nCmdShow);
 
 	// Listen for keys: F1, F2, F While running in the background
 	RegisterHotKey(win.Window(),0,MOD_NOREPEAT,VK_F1);
 	RegisterHotKey(win.Window(),1,MOD_NOREPEAT,VK_F2);
-	RegisterHotKey(win.Window(), 3, MOD_CONTROL, 0x46);
-	RegisterHotKey(win.Window(), 4, MOD_SHIFT, 0x46);
+	RegisterHotKey(win.Window(), 2, MOD_CONTROL, 0x46);
+	RegisterHotKey(win.Window(), 3, MOD_SHIFT, 0x46);
 
 	thread t1(AppLoop, &win);
 
