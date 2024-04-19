@@ -139,6 +139,14 @@
     <ClInclude Include="resource5.h" />
     <ClInclude Include="resource6.h" />
     <ClInclude Include="resource7.h" />
+    <ClInclude Include="resource8.h" />
+    <ClInclude Include="resource9.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="DBD 1v1 Timer1.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="icon\appIcon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
