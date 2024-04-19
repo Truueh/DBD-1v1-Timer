@@ -437,7 +437,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	// Listen for keys: F1, F2, F While running in the background
 	RegisterHotKey(win.Window(),0,MOD_NOREPEAT,VK_F1);
 	RegisterHotKey(win.Window(),1,MOD_NOREPEAT,VK_F2);
-	RegisterHotKey(win.Window(), 2, MOD_NOREPEAT, 0x46);
 	RegisterHotKey(win.Window(), 3, MOD_CONTROL, 0x46);
 	RegisterHotKey(win.Window(), 4, MOD_SHIFT, 0x46);
 
