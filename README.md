@@ -4,7 +4,7 @@ Comes with one simple small window with 2 timer slots on it.
 
 To target timer 1 press F1, to target timer 2 press F2.
 
-To start the timer - Press ctrl + f or shift + f. Doesn't require the window to be focused.
+To start the timer - Press f. Doesn't require the window to be focused.
 
 The window is draggable and will show above any other window that isn't set to be the top window.
 
