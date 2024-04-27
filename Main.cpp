@@ -10,6 +10,7 @@
 
 using std::thread; using std::wstring;
 
+// Enum assignment for readable code
 enum TimerState
 {
 	running,
@@ -17,6 +18,7 @@ enum TimerState
 	zero
 };
 
+// A timer struct with all the neccessary functionalities of the timer
 class Timer
 {
 private:
@@ -137,6 +139,7 @@ public:
 	}
 };
 
+// Template class for specific window's classes to inherit from
 template <class DERIVED_CLASS> class BaseWindow
 {
 public:
@@ -209,6 +212,7 @@ protected:
 	virtual LRESULT HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam) = 0;
 };
 
+// Release pointers safely
 template <class T> void SafeRelease(T** ppT)
 {
 	if (*ppT)
@@ -218,6 +222,7 @@ template <class T> void SafeRelease(T** ppT)
 	}
 }
 
+// The class responsible for the main window of the app
 class MainWindow : public BaseWindow<MainWindow>
 {
 	// Resources
@@ -378,33 +383,6 @@ public:
 			PostQuitMessage(0);
 			appRunning = false;
 			return 0;
-		case WM_HOTKEY:
-			// Timer logic
-			switch ((int)wParam)
-			{
-			case 0: // f1
-				activeTimer = &timer1;
-				break;
-			case 1: // f2
-				activeTimer = &timer2;
-				break;
-			case 2: // ctrl + f
-			case 3: // shift + f
-				if (activeTimer != NULL)
-				{
-					if (activeTimer->GetTimerState() == TimerState::zero) {
-						activeTimer->StartTimer();
-					}
-					else if (activeTimer->GetTimerState() == TimerState::running) {
-						activeTimer->StopTimer();
-					}
-					else {
-						activeTimer->ResetTimer();
-					}
-				}
-				break;
-			}
-			return 0;
 		case WM_LBUTTONDOWN:
 			mouseDown = true;
 			clickMousePos[0] = GET_X_LPARAM(lParam);
@@ -430,12 +408,39 @@ public:
 
 		return DefWindowProc(Window(), wMsg, wParam, lParam);
 	}
+	void HandleHotKey(int code)
+	{
+		switch (code)
+		{
+		case 0: // f1
+			activeTimer = &timer1;
+			break;
+		case 1: // f2
+			activeTimer = &timer2;
+			break;
+		case 2: // f
+			if (activeTimer != NULL)
+			{
+				if (activeTimer->GetTimerState() == TimerState::zero) {
+					activeTimer->StartTimer();
+				}
+				else if (activeTimer->GetTimerState() == TimerState::running) {
+					activeTimer->StopTimer();
+				}
+				else {
+					activeTimer->ResetTimer();
+				}
+			}
+			break;
+		}
+	}
 
 	void Draw() {
 		HandlePainting();
 	}
 };
 
+// App Loop logic
 void AppLoop(MainWindow* win)
 {
 	while (win->appRunning)
@@ -447,10 +452,38 @@ void AppLoop(MainWindow* win)
 	}
 }
 
+// Declare global variable to the main window's class to allow access from the hook proc
+MainWindow* pGlobalTimerWindow = NULL;
+
+// The hook procedure to listen for kestrokes f1, f2 and f
+LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	if (wParam == WM_KEYUP)
+	{
+		KBDLLHOOKSTRUCT* pKbdHookStruct = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+		switch (pKbdHookStruct->vkCode)
+		{
+		case 0x46:
+			pGlobalTimerWindow->HandleHotKey(2);
+			break;
+		case VK_F2:
+			pGlobalTimerWindow->HandleHotKey(1);
+			break;
+		case VK_F1:
+			pGlobalTimerWindow->HandleHotKey(0);
+			break;
+		}
+	}
+
+	return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
+// The main function
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
 	// Create a window
 	MainWindow win;
+	pGlobalTimerWindow = &win;
 
 	if (!win.Create(L"Timer", 0, 0, 300, 50, WS_EX_TOPMOST, WS_POPUP)) {
 		return 0;
@@ -458,12 +491,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	
 	ShowWindow(win.Window(), nCmdShow);
 
-	// Listen for keys: F1, F2, F While running in the background
-	RegisterHotKey(win.Window(),0,MOD_NOREPEAT,VK_F1);
-	RegisterHotKey(win.Window(),1,MOD_NOREPEAT,VK_F2);
-	RegisterHotKey(win.Window(), 2, MOD_CONTROL, 0x46);
-	RegisterHotKey(win.Window(), 3, MOD_SHIFT, 0x46);
+	// Listen for keys: F1, F2, F While running in the background - Install a hook procedure
+	HHOOK kbd = SetWindowsHookEx(WH_KEYBOARD_LL, &KBHook, 0, 0);
 
+	// Create a thread for the app loop (ticks)
 	thread t1(AppLoop, &win);
 
 	// Handle messages
