@@ -23,7 +23,7 @@ class Timer
 {
 private:
 	TimerState timerState;
-	int time;
+	int time = 0;
 	SYSTEMTIME startTime;
 	SYSTEMTIME updatingTime;
 
@@ -92,6 +92,11 @@ public:
 	TimerState GetTimerState()
 	{
 		return timerState;
+	}
+
+	int GetTimeInSeconds()
+	{
+		return time;
 	}
 
 	void StartTimer()
@@ -230,6 +235,7 @@ class MainWindow : public BaseWindow<MainWindow>
 	ID2D1HwndRenderTarget* pRenderTarget = 0;
 	ID2D1SolidColorBrush* pBrushGreen;
 	ID2D1SolidColorBrush* pBrushBlue;
+	ID2D1SolidColorBrush* pBrushRed;
 
 	// Writing Resources
 	IDWriteFactory* pWriteFactory;
@@ -261,6 +267,9 @@ private:
 
 				const D2D1_COLOR_F blueColor = D2D1::ColorF(0.0f, 0.6f, 1);
 				hr = pRenderTarget->CreateSolidColorBrush(blueColor, &pBrushBlue);
+
+				const D2D1_COLOR_F redColor = D2D1::ColorF(1, 0.3f, 0.3f);
+				hr = pRenderTarget->CreateSolidColorBrush(redColor, &pBrushRed);
 			}
 		}
 
@@ -311,6 +320,7 @@ private:
 		SafeRelease(&pRenderTarget);
 		SafeRelease(&pBrushGreen);
 		SafeRelease(&pBrushBlue);
+		SafeRelease(&pBrushRed);
 		SafeRelease(&pWriteFactory);
 		SafeRelease(&pTextFormat);
 	}
@@ -334,18 +344,30 @@ private:
 			{
 				if (activeTimer != NULL)
 				{
-					D2D1_RECT_F rect;
-
-					if (activeTimer == &timer1) {
-						rect = rect1;
-						timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushGreen);
+					// Select color for timer 2
+					ID2D1SolidColorBrush* pBrushTimer2;
+					if (timer1.GetTimeInSeconds() > 0
+						&& timer1.GetTimeInSeconds() - timer2.GetTimeInSeconds() <= 20
+						&& (timer2.GetTimerState() == TimerState::running || timer2.GetTimerState() == TimerState::paused)
+						&& timer1.GetTimeInSeconds() - timer2.GetTimeInSeconds() > 0)
+					{
+						pBrushTimer2 = pBrushRed;
 					}
 					else if (activeTimer == &timer2) {
-						rect = rect2;
-						timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
+						pBrushTimer2 = pBrushBlue;
+					}
+					else {
+						pBrushTimer2 = pBrushGreen;
 					}
 
-					activeTimer->Draw(pRenderTarget, pTextFormat, rect, pBrushBlue);
+					// Draw timers
+					if (activeTimer == &timer1) {
+						timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushBlue);
+					}
+					else {
+						timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
+					}
+					timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushTimer2);
 				}
 				else
 				{
@@ -362,6 +384,18 @@ private:
 			}
 			EndPaint(m_hwnd, &ps);
 		}
+	}
+
+	void HandleWindowDrag(LPARAM lParam)
+	{
+		RECT windowPos;
+		GetWindowRect(m_hwnd, &windowPos);
+		int currPos[2] = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+
+		int xToMove = windowPos.left + (currPos[0] - clickMousePos[0]);
+		int yToMove = windowPos.top + (currPos[1] - clickMousePos[1]);
+
+		SetWindowPos(m_hwnd, NULL, xToMove, yToMove, winSize[0], winSize[1], 0);
 	}
 
 public:
@@ -394,14 +428,7 @@ public:
 		case WM_MOUSEMOVE:
 			if (mouseDown)
 			{
-				RECT windowPos;
-				GetWindowRect(m_hwnd, &windowPos);
-				int currPos[2] = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-
-				int xToMove = windowPos.left + (currPos[0] - clickMousePos[0]);
-				int yToMove = windowPos.top + (currPos[1] - clickMousePos[1]);
-
-				SetWindowPos(m_hwnd, NULL, xToMove, yToMove, winSize[0], winSize[1], 0);
+				HandleWindowDrag(lParam);
 			}
 			return 0;
 		}
@@ -452,13 +479,13 @@ void AppLoop(MainWindow* win)
 	}
 }
 
-// Declare global variable to the main window's class to allow access from the hook proc
+// Global reference to the main window class instance (for the hook proc)
 MainWindow* pGlobalTimerWindow = NULL;
 
 // The hook procedure to listen for kestrokes f1, f2 and f
 LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
 {
-	if (wParam == WM_KEYUP)
+	if (wParam == WM_KEYUP && pGlobalTimerWindow != NULL)
 	{
 		KBDLLHOOKSTRUCT* pKbdHookStruct = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
 		switch (pKbdHookStruct->vkCode)
