@@ -5,6 +5,7 @@
 #include <thread>
 #include <dwrite.h>
 #include <windowsx.h>
+#include <CommCtrl.h>
 
 #pragma comment (lib, "d2d1")
 
@@ -432,7 +433,6 @@ public:
 			}
 			return 0;
 		}
-
 		return DefWindowProc(Window(), wMsg, wParam, lParam);
 	}
 	void HandleHotKey(int code)
@@ -512,7 +512,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	MainWindow win;
 	pGlobalTimerWindow = &win;
 
-	if (!win.Create(L"Timer", 0, 0, 300, 50, WS_EX_TOPMOST, WS_POPUP)) {
+	if (!win.Create(L"Timer", 0, 0, 275, 40, WS_EX_TOPMOST, WS_POPUP)) {
 		return 0;
 	}
 	
