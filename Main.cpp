@@ -432,6 +432,33 @@ public:
 				HandleWindowDrag(lParam);
 			}
 			return 0;
+		case WM_COMMAND:
+			switch (wParam)
+			{
+			case 1: // settings
+				// settings logic...
+				return 0;
+			case 0: // Quit
+				PostQuitMessage(0);
+				appRunning = false;
+				return 0;
+			}
+			return 0;
+		case WM_CONTEXTMENU:
+			{
+				// mouse pos
+				int mouseX = GET_X_LPARAM(lParam);
+				int mouseY = GET_Y_LPARAM(lParam);
+
+				// create popup menu
+				HMENU hMenu = CreatePopupMenu();
+				InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, 0, L"Quit");
+				InsertMenu(hMenu, 0, MF_BYPOSITION | MF_SEPARATOR, 100, L"");
+				InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, 1, L"Settings");
+				SetForegroundWindow(m_hwnd);
+				TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_TOPALIGN, mouseX, mouseY, 0, m_hwnd, NULL);
+				return 0;
+			}
 		}
 		return DefWindowProc(Window(), wMsg, wParam, lParam);
 	}
