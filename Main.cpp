@@ -5,7 +5,8 @@
 #include <thread>
 #include <dwrite.h>
 #include <windowsx.h>
-#include <CommCtrl.h>
+#include <commctrl.h>
+#include "helperFunctions.h"
 
 #pragma comment (lib, "d2d1")
 
@@ -228,6 +229,88 @@ template <class T> void SafeRelease(T** ppT)
 	}
 }
 
+class SettingsWindow : public BaseWindow<SettingsWindow>
+{
+private:
+	int windowWidth = 310;
+	int windowHeight = 410;
+
+	void InitializeWindow()
+	{
+		// preset values
+		int xTitle = 15;
+		int yOffset = 35;
+
+		int xHotkey = windowWidth / 2 + 15;
+		int widthHotkey = 150;
+		int heightHotkey = 25;
+
+		// Initialize headers
+		HWND hwndTitleHotkeys = CreateWindowEx(0, WC_STATIC, L"Hotkeys", WS_VISIBLE | WS_CHILDWINDOW, 10, 5, 60, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTextStart = CreateWindowEx(0, WC_STATIC, L"Start / Stop / Reset", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 1, 150, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTextTimer1 = CreateWindowEx(0, WC_STATIC, L"Timer 1", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 2, 150, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTextTimer2 = CreateWindowEx(0, WC_STATIC, L"Timer 2", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 3, 150, 40, m_hwnd, 0, NULL, NULL);
+
+		// Initialize hotkey detectors
+		HWND hwndHotkeyStart = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 1, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_START, NULL, NULL);
+		HWND hwndHotkeyTimer1 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 2, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER1, NULL, NULL); 
+		HWND hwndHotkeyTimer2 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 3, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER2, NULL, NULL);
+
+		// Initialize exit controls
+		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, windowWidth - 120, windowHeight - 30, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL); 
+		HWND hwndCancelButton = CreateWindowEx(0, WC_BUTTON, L"CANCEL", WS_VISIBLE | WS_CHILDWINDOW, windowWidth - 60, windowHeight - 30, 70, 25, m_hwnd, (HMENU)CID_CANCEL, NULL, NULL);
+	}
+
+	bool WINAPI ProcessHotkey(HWND hwndHot, HWND hwndMain)
+	{
+		WORD wHotkey = (WORD)SendMessage(hwndHot, HKM_GETHOTKEY, 0, 0);
+	}
+
+public:
+	LRESULT HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
+	{
+		switch (wMsg)
+		{
+		case WM_CREATE:
+			InitializeWindow();
+			return 0;
+		case WM_DESTROY:
+			m_hwnd = NULL;
+			return 0;
+		case WM_COMMAND: // Control item clicked
+			{
+				HWND hwndCtrl = reinterpret_cast<HWND>(lParam); // clicked item handle
+				int controlID = GetDlgCtrlID(hwndCtrl); // retrieve control ID
+				WORD virtualKey = (WORD)SendMessage(hwndCtrl, HKM_GETHOTKEY, 0, 0); // Retrieve HOTKEY pressed
+
+				switch (controlID)
+				{
+				case CID_OK: // ok
+
+					return 0;
+				case CID_CANCEL: // cancel
+					DestroyWindow(m_hwnd);
+					return 0;
+				case CID_START: // Start
+
+					return 0;
+				case CID_TIMER1: // Timer 1
+					
+					return 0;
+				case CID_TIMER2: // Timer 2
+
+					return 0;
+				}
+
+				return 0;
+			}
+		}
+		return DefWindowProc(Window(), wMsg, wParam, lParam);
+	}
+
+	LPCWSTR ClassName() const { return L"Settings Window"; }
+};
+
 // The class responsible for the main window of the app
 class MainWindow : public BaseWindow<MainWindow>
 {
@@ -403,6 +486,8 @@ public:
 	Timer timer1 = Timer();
 	Timer timer2 = Timer();
 
+	SettingsWindow* pSettingsWindow;
+
 	LPCWSTR ClassName() const { return L"Main Window"; }
 	LRESULT HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 	{
@@ -436,7 +521,15 @@ public:
 			switch (wParam)
 			{
 			case 1: // settings
-				// settings logic...
+				if (pSettingsWindow->Window() == NULL) // dont create multiple settings windows
+				{
+					// Create and show settings window
+					if (!pSettingsWindow->Create(L"Settings", 500, 200, 350, 450, 0, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME, m_hwnd)) {
+						return 0;
+					}
+
+					ShowWindow(pSettingsWindow->Window(), SW_SHOW);
+				}
 				return 0;
 			case 0: // Quit
 				PostQuitMessage(0);
@@ -535,15 +628,24 @@ LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
 // The main function
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
-	// Create a window
+	// Initiate common controls lib
+	InitCommonControls();
+
+	// Create the main window
 	MainWindow win;
-	pGlobalTimerWindow = &win;
 
 	if (!win.Create(L"Timer", 0, 0, 275, 40, WS_EX_TOPMOST, WS_POPUP)) {
 		return 0;
 	}
 	
 	ShowWindow(win.Window(), nCmdShow);
+
+	// Create settings window
+	SettingsWindow settings;
+	win.pSettingsWindow = &settings;
+
+	// global variable for timer
+	pGlobalTimerWindow = &win;
 
 	// Listen for keys: F1, F2, F While running in the background - Install a hook procedure
 	HHOOK kbd = SetWindowsHookEx(WH_KEYBOARD_LL, &KBHook, 0, 0);
