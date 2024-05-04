@@ -3,15 +3,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include "helperFunctions.h"
 
 using namespace std;
-
-struct settingsStruct
-{
-	int startKey;
-	int timer1Key;
-	int timer2Key;
-};
 
 // Retrieve settings information from json file
 settingsStruct getSettingsStruct()

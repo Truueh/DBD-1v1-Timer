@@ -232,6 +232,7 @@ template <class T> void SafeRelease(T** ppT)
 class SettingsWindow : public BaseWindow<SettingsWindow>
 {
 private:
+	settingsStruct settings;
 	int windowWidth = 310;
 	int windowHeight = 410;
 
@@ -259,11 +260,41 @@ private:
 		// Initialize exit controls
 		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, windowWidth - 120, windowHeight - 30, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL); 
 		HWND hwndCancelButton = CreateWindowEx(0, WC_BUTTON, L"CANCEL", WS_VISIBLE | WS_CHILDWINDOW, windowWidth - 60, windowHeight - 30, 70, 25, m_hwnd, (HMENU)CID_CANCEL, NULL, NULL);
+	
+		// Retrieve settings
+		settings = getSettingsStruct();
+
+		// Apply current settings
+		SendMessage(hwndHotkeyStart, HKM_SETHOTKEY, settings.startKey, 0);
+		SendMessage(hwndHotkeyTimer1, HKM_SETHOTKEY, settings.timer1Key, 0);
+		SendMessage(hwndHotkeyTimer2, HKM_SETHOTKEY, settings.timer2Key, 0);
 	}
 
-	bool WINAPI ProcessHotkey(HWND hwndHot, HWND hwndMain)
+	void HandleControlCommand(LPARAM lParam)
 	{
-		WORD wHotkey = (WORD)SendMessage(hwndHot, HKM_GETHOTKEY, 0, 0);
+		HWND hwndCtrl = reinterpret_cast<HWND>(lParam); // clicked item handle
+		int controlID = GetDlgCtrlID(hwndCtrl); // retrieve control ID
+		WORD virtualKey = (WORD)SendMessage(hwndCtrl, HKM_GETHOTKEY, 0, 0); // Retrieve HOTKEY pressed
+
+		switch (controlID)
+		{
+		case CID_OK: // ok
+			setSettingsStruct(settings);
+			DestroyWindow(m_hwnd);
+			break;
+		case CID_CANCEL: // cancel
+			DestroyWindow(m_hwnd);
+			break;
+		case CID_START: // Start
+			settings.startKey = virtualKey;
+			break;
+		case CID_TIMER1: // Timer 1
+			settings.timer1Key = virtualKey;
+			break;
+		case CID_TIMER2: // Timer 2
+			settings.timer2Key = virtualKey;
+			break;
+		}
 	}
 
 public:
@@ -278,32 +309,8 @@ public:
 			m_hwnd = NULL;
 			return 0;
 		case WM_COMMAND: // Control item clicked
-			{
-				HWND hwndCtrl = reinterpret_cast<HWND>(lParam); // clicked item handle
-				int controlID = GetDlgCtrlID(hwndCtrl); // retrieve control ID
-				WORD virtualKey = (WORD)SendMessage(hwndCtrl, HKM_GETHOTKEY, 0, 0); // Retrieve HOTKEY pressed
-
-				switch (controlID)
-				{
-				case CID_OK: // ok
-
-					return 0;
-				case CID_CANCEL: // cancel
-					DestroyWindow(m_hwnd);
-					return 0;
-				case CID_START: // Start
-
-					return 0;
-				case CID_TIMER1: // Timer 1
-					
-					return 0;
-				case CID_TIMER2: // Timer 2
-
-					return 0;
-				}
-
-				return 0;
-			}
+			HandleControlCommand(lParam);
+			return 0;
 		}
 		return DefWindowProc(Window(), wMsg, wParam, lParam);
 	}
@@ -520,7 +527,7 @@ public:
 		case WM_COMMAND:
 			switch (wParam)
 			{
-			case 1: // settings
+			case MENU_SETTINGS:
 				if (pSettingsWindow->Window() == NULL) // dont create multiple settings windows
 				{
 					// Create and show settings window
@@ -531,7 +538,7 @@ public:
 					ShowWindow(pSettingsWindow->Window(), SW_SHOW);
 				}
 				return 0;
-			case 0: // Quit
+			case MENU_QUIT:
 				PostQuitMessage(0);
 				appRunning = false;
 				return 0;
@@ -545,9 +552,9 @@ public:
 
 				// create popup menu
 				HMENU hMenu = CreatePopupMenu();
-				InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, 0, L"Quit");
+				InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, MENU_QUIT, L"Quit");
 				InsertMenu(hMenu, 0, MF_BYPOSITION | MF_SEPARATOR, 100, L"");
-				InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, 1, L"Settings");
+				InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, MENU_SETTINGS, L"Settings");
 				SetForegroundWindow(m_hwnd);
 				TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_TOPALIGN, mouseX, mouseY, 0, m_hwnd, NULL);
 				return 0;
@@ -610,7 +617,7 @@ LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
 		KBDLLHOOKSTRUCT* pKbdHookStruct = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
 		switch (pKbdHookStruct->vkCode)
 		{
-		case 0x46:
+		case 70:
 			pGlobalTimerWindow->HandleHotKey(2);
 			break;
 		case VK_F2:

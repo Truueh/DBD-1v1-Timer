@@ -4,6 +4,8 @@
 #define CID_START				3
 #define CID_TIMER1				4
 #define CID_TIMER2				5
+#define MENU_QUIT				1
+#define MENU_SETTINGS			0
 
 struct settingsStruct
 {
