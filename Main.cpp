@@ -20,6 +20,10 @@ enum TimerState
 	zero
 };
 
+settingsStruct appSettings;
+
+class MainWindow;
+
 // A timer struct with all the neccessary functionalities of the timer
 class Timer
 {
@@ -229,12 +233,13 @@ template <class T> void SafeRelease(T** ppT)
 	}
 }
 
+// The class responsible for the settings window
 class SettingsWindow : public BaseWindow<SettingsWindow>
 {
 private:
-	settingsStruct settings;
 	int windowWidth = 310;
 	int windowHeight = 410;
+	settingsStruct tempSettings;
 
 	void InitializeWindow()
 	{
@@ -254,20 +259,19 @@ private:
 
 		// Initialize hotkey detectors
 		HWND hwndHotkeyStart = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 1, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_START, NULL, NULL);
-		HWND hwndHotkeyTimer1 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 2, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER1, NULL, NULL); 
+		HWND hwndHotkeyTimer1 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 2, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER1, NULL, NULL);
 		HWND hwndHotkeyTimer2 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 3, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER2, NULL, NULL);
 
 		// Initialize exit controls
-		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, windowWidth - 120, windowHeight - 30, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL); 
+		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, windowWidth - 120, windowHeight - 30, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL);
 		HWND hwndCancelButton = CreateWindowEx(0, WC_BUTTON, L"CANCEL", WS_VISIBLE | WS_CHILDWINDOW, windowWidth - 60, windowHeight - 30, 70, 25, m_hwnd, (HMENU)CID_CANCEL, NULL, NULL);
-	
-		// Retrieve settings
-		settings = getSettingsStruct();
+
+		tempSettings = getSettingsStruct();
 
 		// Apply current settings
-		SendMessage(hwndHotkeyStart, HKM_SETHOTKEY, settings.startKey, 0);
-		SendMessage(hwndHotkeyTimer1, HKM_SETHOTKEY, settings.timer1Key, 0);
-		SendMessage(hwndHotkeyTimer2, HKM_SETHOTKEY, settings.timer2Key, 0);
+		SendMessage(hwndHotkeyStart, HKM_SETHOTKEY, appSettings.startKey, 0);
+		SendMessage(hwndHotkeyTimer1, HKM_SETHOTKEY, appSettings.timer1Key, 0);
+		SendMessage(hwndHotkeyTimer2, HKM_SETHOTKEY, appSettings.timer2Key, 0);
 	}
 
 	void HandleControlCommand(LPARAM lParam)
@@ -279,20 +283,21 @@ private:
 		switch (controlID)
 		{
 		case CID_OK: // ok
-			setSettingsStruct(settings);
+			setSettingsStruct(tempSettings);
+			appSettings = tempSettings;
 			DestroyWindow(m_hwnd);
 			break;
 		case CID_CANCEL: // cancel
 			DestroyWindow(m_hwnd);
 			break;
 		case CID_START: // Start
-			settings.startKey = virtualKey;
+			tempSettings.startKey = virtualKey;
 			break;
 		case CID_TIMER1: // Timer 1
-			settings.timer1Key = virtualKey;
+			tempSettings.timer1Key = virtualKey;
 			break;
 		case CID_TIMER2: // Timer 2
-			settings.timer2Key = virtualKey;
+			tempSettings.timer2Key = virtualKey;
 			break;
 		}
 	}
@@ -303,8 +308,10 @@ public:
 		switch (wMsg)
 		{
 		case WM_CREATE:
+		{
 			InitializeWindow();
 			return 0;
+		}
 		case WM_DESTROY:
 			m_hwnd = NULL;
 			return 0;
@@ -504,6 +511,7 @@ public:
 			if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &pFactory))) {
 				return -1;
 			}
+			appSettings = getSettingsStruct();
 			appRunning = true;
 			return 0;
 		case WM_DESTROY:
@@ -531,7 +539,7 @@ public:
 				if (pSettingsWindow->Window() == NULL) // dont create multiple settings windows
 				{
 					// Create and show settings window
-					if (!pSettingsWindow->Create(L"Settings", 500, 200, 350, 450, 0, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME, m_hwnd)) {
+					if (!pSettingsWindow->Create(L"Settings", 500, 200, 350, 450, 0, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME, m_hwnd, 0, 0, NULL)) {
 						return 0;
 					}
 
@@ -566,13 +574,13 @@ public:
 	{
 		switch (code)
 		{
-		case 0: // f1
+		case KEY_TIMER1: // timer1 key
 			activeTimer = &timer1;
 			break;
-		case 1: // f2
+		case KEY_TIMER2: // timer2 key
 			activeTimer = &timer2;
 			break;
-		case 2: // f
+		case KEY_START: // start key
 			if (activeTimer != NULL)
 			{
 				if (activeTimer->GetTimerState() == TimerState::zero) {
@@ -612,20 +620,22 @@ MainWindow* pGlobalTimerWindow = NULL;
 // The hook procedure to listen for kestrokes f1, f2 and f
 LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
 {
-	if (wParam == WM_KEYUP && pGlobalTimerWindow != NULL)
+	if (wParam == WM_KEYUP && pGlobalTimerWindow != NULL && appSettings.startKey != NULL)
 	{
 		KBDLLHOOKSTRUCT* pKbdHookStruct = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
-		switch (pKbdHookStruct->vkCode)
+		const int startKey = appSettings.startKey;
+
+		if (pKbdHookStruct->vkCode == appSettings.startKey)
 		{
-		case 70:
-			pGlobalTimerWindow->HandleHotKey(2);
-			break;
-		case VK_F2:
-			pGlobalTimerWindow->HandleHotKey(1);
-			break;
-		case VK_F1:
-			pGlobalTimerWindow->HandleHotKey(0);
-			break;
+			pGlobalTimerWindow->HandleHotKey(KEY_START);
+		}
+		else if (pKbdHookStruct->vkCode == appSettings.timer1Key)
+		{
+			pGlobalTimerWindow->HandleHotKey(KEY_TIMER1);
+		}
+		else if (pKbdHookStruct->vkCode == appSettings.timer2Key)
+		{
+			pGlobalTimerWindow->HandleHotKey(KEY_TIMER2);
 		}
 	}
 

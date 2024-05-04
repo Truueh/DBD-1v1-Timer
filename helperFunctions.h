@@ -6,6 +6,9 @@
 #define CID_TIMER2				5
 #define MENU_QUIT				1
 #define MENU_SETTINGS			0
+#define KEY_START				0
+#define KEY_TIMER1				1
+#define KEY_TIMER2				2
 
 struct settingsStruct
 {
