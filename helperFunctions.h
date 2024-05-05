@@ -21,3 +21,7 @@ struct settingsStruct
 settingsStruct getSettingsStruct();
 
 void setSettingsStruct(settingsStruct settings);
+
+void createSettingsFile();
+
+bool settingsFileExists();

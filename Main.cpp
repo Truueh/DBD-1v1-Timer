@@ -545,6 +545,10 @@ public:
 
 					ShowWindow(pSettingsWindow->Window(), SW_SHOW);
 				}
+				else
+				{
+					SetForegroundWindow(pSettingsWindow->Window());
+				}
 				return 0;
 			case MENU_QUIT:
 				PostQuitMessage(0);
@@ -645,6 +649,12 @@ LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
 // The main function
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
+	// Create settings file on program first run
+	if (!settingsFileExists())
+	{
+		createSettingsFile();
+	}
+
 	// Initiate common controls lib
 	InitCommonControls();
 

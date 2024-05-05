@@ -47,3 +47,23 @@ void setSettingsStruct(settingsStruct settings)
 	std::ofstream outputFileStream("settings.json");
 	writer->write(settingsJson, &outputFileStream);
 }
+
+// Initial creation of the settings.json file
+void createSettingsFile()
+{
+	ofstream file("settings.json");
+
+	string json = "{\n\"start\": 70,\n\"timer1\": 112,\n\"timer2\": 113\n}";
+
+	file << json;
+
+	file.close();
+}
+
+// Return wether settings.json exists or not
+bool settingsFileExists() {
+	string name = "settings.json";
+
+	ifstream f(name.c_str());
+	return f.good();
+}
