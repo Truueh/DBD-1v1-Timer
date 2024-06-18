@@ -1,4 +1,4 @@
-A baisc timer application made for dead by daylight but really can be used anywhere.
+A basic timer application made for dead by daylight but really can be used anywhere.
 
 Comes with one simple small window with 2 timer slots on it.
 
