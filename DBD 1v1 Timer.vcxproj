@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="packages\vcpkg.C.projects.vcpkg.vcpkg.1.0.0\build\native\vcpkg.C.projects.vcpkg.vcpkg.props" Condition="Exists('packages\vcpkg.C.projects.vcpkg.vcpkg.1.0.0\build\native\vcpkg.C.projects.vcpkg.vcpkg.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -77,9 +76,10 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\zorit\Desktop\code\code\dbd1v1\DBD 1v1 Timer\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -91,9 +91,10 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\zorit\Desktop\code\code\dbd1v1\DBD 1v1 Timer\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -104,6 +105,7 @@
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\zorit\Desktop\code\code\dbd1v1\DBD 1v1 Timer\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -119,6 +121,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\zorit\Desktop\code\code\dbd1v1\DBD 1v1 Timer\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -129,13 +132,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\Downloads\jsoncpp-master\jsoncpp-master\dist\jsoncpp.cpp" />
+    <ClCompile Include="dist\jsoncpp.cpp" />
     <ClCompile Include="HelperFunctions.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\..\Downloads\jsoncpp-master\jsoncpp-master\dist\json\json-forwards.h" />
-    <ClInclude Include="..\..\..\..\..\Downloads\jsoncpp-master\jsoncpp-master\dist\json\json.h" />
     <ClInclude Include="helperFunctions.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resource1.h" />
@@ -155,18 +156,8 @@
     <Image Include="icon\appIcon.ico" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="settings.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-    <Import Project="packages\vcpkg.C.projects.vcpkg.vcpkg.1.0.0\build\native\vcpkg.C.projects.vcpkg.vcpkg.targets" Condition="Exists('packages\vcpkg.C.projects.vcpkg.vcpkg.1.0.0\build\native\vcpkg.C.projects.vcpkg.vcpkg.targets')" />
-  </ImportGroup>
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('packages\vcpkg.C.projects.vcpkg.vcpkg.1.0.0\build\native\vcpkg.C.projects.vcpkg.vcpkg.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\vcpkg.C.projects.vcpkg.vcpkg.1.0.0\build\native\vcpkg.C.projects.vcpkg.vcpkg.props'))" />
-    <Error Condition="!Exists('packages\vcpkg.C.projects.vcpkg.vcpkg.1.0.0\build\native\vcpkg.C.projects.vcpkg.vcpkg.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\vcpkg.C.projects.vcpkg.vcpkg.1.0.0\build\native\vcpkg.C.projects.vcpkg.vcpkg.targets'))" />
-  </Target>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>
