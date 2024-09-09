@@ -70,7 +70,7 @@ private:
 			millisStr += '0';
 		}
 
-		wstring text;
+		wstring text = L"              ";
 
 		if (minutesInt < 1) {
 			if (secondsInt < 10) {
