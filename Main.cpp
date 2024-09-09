@@ -29,61 +29,92 @@ class Timer
 {
 private:
 	TimerState timerState;
-	int time = 0;
+	int time = 0; // in milliseconds
 	SYSTEMTIME startTime;
 	SYSTEMTIME updatingTime;
-
+	
 	int SubtractTimes(SYSTEMTIME t1, SYSTEMTIME t2)
 	{
 		int seconds = 0;
 		int minutes = 0;
+		int millis = 0;
 
-		if (t1.wMinute > t2.wMinute)
-		{
-			minutes = (60 - t1.wMinute) + t2.wMinute;
-		}
-		else
-		{
-			minutes = t2.wMinute - t1.wMinute;
-		}
-		seconds = t2.wSecond - t1.wSecond;
-		seconds = (60 * minutes) + seconds;
-		if (t1.wMilliseconds < t2.wMilliseconds) {
-			seconds++;
+		int t1Millis = (t1.wMinute * 60 * 1000) + (t1.wSecond * 1000) + t1.wMilliseconds;
+		int t2Millis = (t2.wMinute * 60 * 1000) + (t2.wSecond * 1000) + t2.wMilliseconds;
+
+		if (t1Millis > t2Millis) {
+			t2Millis += (60 * 60 * 1000);
 		}
 
-		return seconds > 0 ? seconds - 1: 0;
+		millis = t2Millis - t1Millis;
+
+		return millis;
 	}
 
 	wstring GetTimeAsText()
 	{
 		int minutesInt = 0;
-		int secondsInt = time;
+		int secondsInt = 0;
+		int millisInt = time;
 
-		while (secondsInt > 59) {
-			minutesInt++;
-			secondsInt -= 60;
-		}
+		secondsInt = millisInt / 1000;
+		minutesInt = secondsInt / 60;
+		millisInt = millisInt % 1000;
+		secondsInt = secondsInt % 60;
 
 		wstring secondsStr = std::to_wstring(secondsInt);
 		wstring minutesStr = std::to_wstring(minutesInt);
+		wstring millisStr = std::to_wstring(millisInt);
 
-		wstring text = L"00:00";
-		if (minutesInt > 9) {
-			text[0] = minutesStr[0];
-			text[1] = minutesStr[1];
-		}
-		else {
-			text[1] = minutesStr[0];
+		if (millisStr.size() == 1) {
+			millisStr += '0';
 		}
 
-		if (secondsInt > 9)
-		{
-			text[3] = secondsStr[0];
-			text[4] = secondsStr[1];
+		wstring text;
+
+		if (minutesInt < 1) {
+			if (secondsInt < 10) {
+				text[0] = secondsStr[0];
+				text[1] = '.';
+				text[2] = millisStr[0];
+				text[3] = millisStr[1];
+			}
+			else {
+				text[0] = secondsStr[0];
+				text[1] = secondsStr[1];
+				text[2] = '.';
+				text[3] = millisStr[0];
+				text[4] = millisStr[1];
+			}
 		}
 		else {
-			text[4] = secondsStr[0];
+			if (minutesInt < 10) {
+				text[0] = minutesStr[0];
+				text[1] = ':';
+
+				if (secondsInt < 10) {
+					text[2] = '0'; text[3] = secondsStr[0];
+				}
+				else {
+					text[2] = secondsStr[0]; text[3] = secondsStr[1];
+				}
+				text[4] = '.';
+				text[5] = millisStr[0];
+			}
+			else {
+				text[0] = minutesStr[0];
+				text[1] = minutesStr[1];
+				text[2] = ':';
+
+				if (secondsInt < 10) {
+					text[3] = '0'; text[4] = secondsStr[0];
+				}
+				else {
+					text[3] = secondsStr[0]; text[4] = secondsStr[1];
+				}
+				text[5] = '.';
+				text[6] = millisStr[0];
+			}
 		}
 
 		return text;
@@ -100,7 +131,7 @@ public:
 		return timerState;
 	}
 
-	int GetTimeInSeconds()
+	int GetTimeInMillis()
 	{
 		return time;
 	}
@@ -138,11 +169,12 @@ public:
 		if (pRenderTarget != NULL)
 		{
 			wstring timeStr = GetTimeAsText();
+
 			const WCHAR* timeText = timeStr.c_str();
 
 			pRenderTarget->DrawTextW(
 				timeText,
-				5,
+				8,
 				pTextFormat,
 				rectF,
 				pBrush);
@@ -385,16 +417,16 @@ private:
 
 			// Set up text format
 			static const WCHAR fontName[] = L"Verdana";
-			static const FLOAT fontSize = 35;
+			static const FLOAT fontSize = 34;
 
 			if (SUCCEEDED(hr))
 			{
 				pWriteFactory->CreateTextFormat(
 					fontName,
 					NULL,
-					DWRITE_FONT_WEIGHT_NORMAL,
+					DWRITE_FONT_WEIGHT_EXTRA_LIGHT,
 					DWRITE_FONT_STYLE_NORMAL,
-					DWRITE_FONT_STRETCH_NORMAL,
+					DWRITE_FONT_STRETCH_EXTRA_EXPANDED,
 					fontSize,
 					L"",
 					&pTextFormat
@@ -444,10 +476,10 @@ private:
 				{
 					// Select color for timer 2
 					ID2D1SolidColorBrush* pBrushTimer2;
-					if (timer1.GetTimeInSeconds() > 0
-						&& timer1.GetTimeInSeconds() - timer2.GetTimeInSeconds() <= 20
+					if (timer1.GetTimeInMillis() > 0
+						&& timer1.GetTimeInMillis() - timer2.GetTimeInMillis() <= 20000
 						&& (timer2.GetTimerState() == TimerState::running || timer2.GetTimerState() == TimerState::paused)
-						&& timer1.GetTimeInSeconds() - timer2.GetTimeInSeconds() > 0)
+						&& timer1.GetTimeInMillis() - timer2.GetTimeInMillis() > 0)
 					{
 						pBrushTimer2 = pBrushRed;
 					}
@@ -661,7 +693,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	// Create the main window
 	MainWindow win;
 
-	if (!win.Create(L"Timer", 0, 0, 250, 40, WS_EX_TOPMOST, WS_POPUP)) {
+	if (!win.Create(L"Timer", 0, 0, 285, 40, WS_EX_TOPMOST, WS_POPUP)) {
 		return 0;
 	}
 	
