@@ -20,6 +20,7 @@ settingsStruct getSettingsStruct()
 	settings.timer1Key = actualJson["timer1"].asInt();
 	settings.timer2Key = actualJson["timer2"].asInt();
 	settings.optionTransparent = actualJson["optionTransparent"].asBool();
+	settings.clickthrough = false;
 	return settings;
 }
 

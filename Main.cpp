@@ -31,11 +31,24 @@ void ApplySettings(settingsStruct settings) {
 	appSettings = settings;
 
 	if (hwndMainWindow != NULL) {
+		// transparency
 		if (appSettings.optionTransparent) { // add transparent effect
 			SetLayeredWindowAttributes(hwndMainWindow, 0, 255, LWA_COLORKEY | LWA_ALPHA);
 		}
 		else { // remove transparent effect
 			SetLayeredWindowAttributes(hwndMainWindow, 1, 255, LWA_COLORKEY | LWA_ALPHA);
+		}
+
+		// clickthrough
+		if (appSettings.clickthrough) { // make clickthrough
+			// Get the current window style
+			LONG style = GetWindowLong(hwndMainWindow, GWL_EXSTYLE);
+
+			// Add the new style to the current styles
+			style |= WS_EX_TRANSPARENT;
+
+			// Set the new style
+			SetWindowLong(hwndMainWindow, GWL_EXSTYLE, style);
 		}
 	}
 }
@@ -297,7 +310,7 @@ private:
 
 		int xHotkey = windowWidth / 2 + 15;
 		int widthHotkey = 150;
-		int heightHotkey = 25;
+		int heightHotkey = 20;
 		int sizeCheckbox = 40; // mostly irrelevant since there is no text
 
 		// Initialize headers
@@ -305,13 +318,15 @@ private:
 		HWND hwndTextStart = CreateWindowEx(0, WC_STATIC, L"Start / Stop / Reset", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 1, 150, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextTimer1 = CreateWindowEx(0, WC_STATIC, L"Timer 1", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 2, 150, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextTimer2 = CreateWindowEx(0, WC_STATIC, L"Timer 2", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 3, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextTransparentBackground = CreateWindowEx(0, WC_STATIC, L"Transparent Background", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 4, 150, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTextTransparentBackground = CreateWindowEx(0, WC_STATIC, L"Transparent", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 4, 150, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTextCheckboxClickthrough = CreateWindowEx(0, WC_STATIC, L"Clickthrough", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 5, 150, 40, m_hwnd, 0, NULL, NULL);
 
 		// Initialize hotkey detectors
 		HWND hwndHotkeyStart = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 1, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_START, NULL, NULL);
 		HWND hwndHotkeyTimer1 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 2, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER1, NULL, NULL);
 		HWND hwndHotkeyTimer2 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 3, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER2, NULL, NULL);
-		HWND hwndCheckboxTransparentBackground = CreateWindowEx(0, WC_BUTTON, L"",BS_CHECKBOX | WS_VISIBLE | WS_CHILDWINDOW | BS_AUTOCHECKBOX, xHotkey, yOffset * 4, sizeCheckbox, sizeCheckbox, m_hwnd, (HMENU)CID_TRANSPARENT_CB, NULL, NULL);
+		HWND hwndCheckboxTransparentBackground = CreateWindowEx(0, WC_BUTTON, L"",BS_CHECKBOX | WS_VISIBLE | WS_CHILDWINDOW | BS_AUTOCHECKBOX, xHotkey, yOffset * 4 - 10, sizeCheckbox, sizeCheckbox, m_hwnd, (HMENU)CID_TRANSPARENT_CB, NULL, NULL);
+		HWND hwndCheckboxClickthrough = CreateWindowEx(0, WC_BUTTON, L"", BS_CHECKBOX | WS_VISIBLE | WS_CHILDWINDOW | BS_AUTOCHECKBOX, xHotkey, yOffset * 5 - 10, sizeCheckbox, sizeCheckbox, m_hwnd, (HMENU)CID_CLICKTHROUGH, NULL, NULL);
 
 		// Initialize exit controls
 		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, windowWidth - 120, windowHeight - 30, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL);
@@ -324,6 +339,7 @@ private:
 		SendMessage(hwndHotkeyTimer1, HKM_SETHOTKEY, appSettings.timer1Key, 0);
 		SendMessage(hwndHotkeyTimer2, HKM_SETHOTKEY, appSettings.timer2Key, 0);
 		SendMessage(hwndCheckboxTransparentBackground, BM_SETCHECK, appSettings.optionTransparent, 0);
+		SendMessage(hwndCheckboxClickthrough, BM_SETCHECK, appSettings.clickthrough, 0);
 	}
 
 	void HandleControlCommand(LPARAM lParam)
@@ -351,12 +367,10 @@ private:
 			tempSettings.timer2Key = virtualKey;
 			break;
 		case CID_TRANSPARENT_CB: // Transparent background checkbox
-			if (Button_GetCheck(hwndCtrl) == BST_CHECKED) {
-				tempSettings.optionTransparent = true;
-			}
-			else {
-				tempSettings.optionTransparent = false;
-			}
+			tempSettings.optionTransparent = (Button_GetCheck(hwndCtrl) == BST_CHECKED);
+			break;
+		case CID_CLICKTHROUGH:
+			tempSettings.clickthrough = (Button_GetCheck(hwndCtrl) == BST_CHECKED);
 			break;
 		}
 	}
