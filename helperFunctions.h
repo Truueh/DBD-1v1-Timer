@@ -4,17 +4,20 @@
 #define CID_START				3
 #define CID_TIMER1				4
 #define CID_TIMER2				5
+#define CID_TRANSPARENT_CB		6
 #define MENU_QUIT				1
 #define MENU_SETTINGS			0
 #define KEY_START				0
 #define KEY_TIMER1				1
 #define KEY_TIMER2				2
+#define OPTION_TRANSPARENT		3
 
 struct settingsStruct
 {
 	int startKey;
 	int timer1Key;
 	int timer2Key;
+	bool optionTransparent;
 };
 
 // HelperFunctions.cpp functions

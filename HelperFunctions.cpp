@@ -19,6 +19,7 @@ settingsStruct getSettingsStruct()
 	settings.startKey = actualJson["start"].asInt();
 	settings.timer1Key = actualJson["timer1"].asInt();
 	settings.timer2Key = actualJson["timer2"].asInt();
+	settings.optionTransparent = actualJson["optionTransparent"].asBool();
 	return settings;
 }
 
@@ -36,6 +37,7 @@ void setSettingsStruct(settingsStruct settings)
 	settingsJson["start"] = settings.startKey;
 	settingsJson["timer1"] = settings.timer1Key;
 	settingsJson["timer2"] = settings.timer2Key;
+	settingsJson["optionTransparent"] = settings.optionTransparent;
 
 	// Write to file
 	Json::StreamWriterBuilder builder;

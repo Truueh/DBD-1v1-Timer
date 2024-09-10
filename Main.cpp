@@ -22,7 +22,23 @@ enum TimerState
 
 settingsStruct appSettings;
 
+HWND hwndMainWindow = nullptr;
+
 class MainWindow;
+
+void ApplySettings(settingsStruct settings) {
+	setSettingsStruct(settings);
+	appSettings = settings;
+
+	if (hwndMainWindow != NULL) {
+		if (appSettings.optionTransparent) { // add transparent effect
+			SetLayeredWindowAttributes(hwndMainWindow, 0, 255, LWA_COLORKEY | LWA_ALPHA);
+		}
+		else { // remove transparent effect
+			SetLayeredWindowAttributes(hwndMainWindow, 1, 255, LWA_COLORKEY | LWA_ALPHA);
+		}
+	}
+}
 
 // A timer struct with all the neccessary functionalities of the timer
 class Timer
@@ -282,17 +298,20 @@ private:
 		int xHotkey = windowWidth / 2 + 15;
 		int widthHotkey = 150;
 		int heightHotkey = 25;
+		int sizeCheckbox = 40; // mostly irrelevant since there is no text
 
 		// Initialize headers
 		HWND hwndTitleHotkeys = CreateWindowEx(0, WC_STATIC, L"Hotkeys", WS_VISIBLE | WS_CHILDWINDOW, 10, 5, 60, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextStart = CreateWindowEx(0, WC_STATIC, L"Start / Stop / Reset", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 1, 150, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextTimer1 = CreateWindowEx(0, WC_STATIC, L"Timer 1", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 2, 150, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextTimer2 = CreateWindowEx(0, WC_STATIC, L"Timer 2", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 3, 150, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTextTransparentBackground = CreateWindowEx(0, WC_STATIC, L"Transparent Background", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 4, 150, 40, m_hwnd, 0, NULL, NULL);
 
 		// Initialize hotkey detectors
 		HWND hwndHotkeyStart = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 1, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_START, NULL, NULL);
 		HWND hwndHotkeyTimer1 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 2, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER1, NULL, NULL);
 		HWND hwndHotkeyTimer2 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 3, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER2, NULL, NULL);
+		HWND hwndCheckboxTransparentBackground = CreateWindowEx(0, WC_BUTTON, L"",BS_CHECKBOX | WS_VISIBLE | WS_CHILDWINDOW | BS_AUTOCHECKBOX, xHotkey, yOffset * 4, sizeCheckbox, sizeCheckbox, m_hwnd, (HMENU)CID_TRANSPARENT_CB, NULL, NULL);
 
 		// Initialize exit controls
 		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, windowWidth - 120, windowHeight - 30, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL);
@@ -304,6 +323,7 @@ private:
 		SendMessage(hwndHotkeyStart, HKM_SETHOTKEY, appSettings.startKey, 0);
 		SendMessage(hwndHotkeyTimer1, HKM_SETHOTKEY, appSettings.timer1Key, 0);
 		SendMessage(hwndHotkeyTimer2, HKM_SETHOTKEY, appSettings.timer2Key, 0);
+		SendMessage(hwndCheckboxTransparentBackground, BM_SETCHECK, appSettings.optionTransparent, 0);
 	}
 
 	void HandleControlCommand(LPARAM lParam)
@@ -315,8 +335,7 @@ private:
 		switch (controlID)
 		{
 		case CID_OK: // ok
-			setSettingsStruct(tempSettings);
-			appSettings = tempSettings;
+			ApplySettings(tempSettings);
 			DestroyWindow(m_hwnd);
 			break;
 		case CID_CANCEL: // cancel
@@ -330,6 +349,14 @@ private:
 			break;
 		case CID_TIMER2: // Timer 2
 			tempSettings.timer2Key = virtualKey;
+			break;
+		case CID_TRANSPARENT_CB: // Transparent background checkbox
+			if (Button_GetCheck(hwndCtrl) == BST_CHECKED) {
+				tempSettings.optionTransparent = true;
+			}
+			else {
+				tempSettings.optionTransparent = false;
+			}
 			break;
 		}
 	}
@@ -362,7 +389,7 @@ class MainWindow : public BaseWindow<MainWindow>
 {
 	// Resources
 	ID2D1Factory* pFactory;
-	ID2D1HwndRenderTarget* pRenderTarget = 0;
+	ID2D1HwndRenderTarget* pRenderTarget = nullptr;
 	ID2D1SolidColorBrush* pBrushGreen;
 	ID2D1SolidColorBrush* pBrushBlue;
 	ID2D1SolidColorBrush* pBrushRed;
@@ -389,7 +416,19 @@ private:
 
 			D2D1_SIZE_U size = D2D1::SizeU(rc.right, rc.bottom);
 
-			hr = pFactory->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(m_hwnd, size), &pRenderTarget);
+			D2D1_RENDER_TARGET_PROPERTIES rtProperties = D2D1::RenderTargetProperties(
+				D2D1_RENDER_TARGET_TYPE_DEFAULT,
+				D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE),
+				96.0f, 96.0f,
+				D2D1_RENDER_TARGET_USAGE_NONE,
+				D2D1_FEATURE_LEVEL_DEFAULT
+			);
+
+			hr = pFactory->CreateHwndRenderTarget(
+				rtProperties,
+				D2D1::HwndRenderTargetProperties(m_hwnd, size),
+				&pRenderTarget
+			);
 
 			if (SUCCEEDED(hr)) {
 				const D2D1_COLOR_F greenColor = D2D1::ColorF(0.0f, 1, 0.4f);
@@ -465,7 +504,7 @@ private:
 			PAINTSTRUCT ps;
 			BeginPaint(m_hwnd, &ps);
 			pRenderTarget->BeginDraw();
-			pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
+			pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black, 0.0f));
 
 			D2D1_RECT_F rect1 = D2D1::RectF(0, 0, winSize[0] / 2, winSize[1]);
 			D2D1_RECT_F rect2 = D2D1::RectF(winSize[0] / 2, 0, winSize[0], winSize[1]);
@@ -638,6 +677,9 @@ public:
 	}
 };
 
+// Global reference to the main window class instance (for the hook proc)
+MainWindow* pGlobalTimerWindow = NULL;
+
 // App Loop logic
 void AppLoop(MainWindow* win)
 {
@@ -649,9 +691,6 @@ void AppLoop(MainWindow* win)
 		win->Draw();
 	}
 }
-
-// Global reference to the main window class instance (for the hook proc)
-MainWindow* pGlobalTimerWindow = NULL;
 
 // The hook procedure to listen for kestrokes f1, f2 and f
 LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
@@ -693,18 +732,23 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	// Create the main window
 	MainWindow win;
 
-	if (!win.Create(L"Timer", 0, 0, 285, 40, WS_EX_TOPMOST, WS_POPUP)) {
+	if (!win.Create(L"Timer", 0, 0, 285, 40, WS_EX_TOPMOST | WS_EX_LAYERED, WS_POPUP)) {
 		return 0;
 	}
-	
+	SetLayeredWindowAttributes(win.Window(), 1, 255, LWA_COLORKEY | LWA_ALPHA);
+
 	ShowWindow(win.Window(), nCmdShow);
 
-	// Create settings window
+	// Create variables for settings window
 	SettingsWindow settings;
 	win.pSettingsWindow = &settings;
 
-	// global variable for timer
+	// global variables for timer
 	pGlobalTimerWindow = &win;
+	hwndMainWindow = win.Window();
+
+	// Apply saved settings
+	ApplySettings(appSettings);
 
 	// Listen for keys: F1, F2, F While running in the background - Install a hook procedure
 	HHOOK kbd = SetWindowsHookEx(WH_KEYBOARD_LL, &KBHook, 0, 0);
