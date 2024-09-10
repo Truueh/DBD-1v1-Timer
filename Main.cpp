@@ -308,9 +308,9 @@ private:
 		int xTitle = 15;
 		int yOffset = 35;
 
-		int xHotkey = windowWidth / 2 + 15;
-		int widthHotkey = 150;
-		int heightHotkey = 20;
+		int xHotkey = windowWidth / 2 + 120;
+		int widthHotkey = 25;
+		int heightHotkey = 25;
 		int sizeCheckbox = 40; // mostly irrelevant since there is no text
 
 		// Initialize headers
@@ -477,7 +477,7 @@ private:
 				pWriteFactory->CreateTextFormat(
 					fontName,
 					NULL,
-					DWRITE_FONT_WEIGHT_EXTRA_LIGHT,
+					DWRITE_FONT_WEIGHT_HEAVY,
 					DWRITE_FONT_STYLE_NORMAL,
 					DWRITE_FONT_STRETCH_EXTRA_EXPANDED,
 					fontSize,
