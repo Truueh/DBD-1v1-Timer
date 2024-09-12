@@ -319,7 +319,7 @@ private:
 		HWND hwndTextTimer1 = CreateWindowEx(0, WC_STATIC, L"Timer 1", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 2, 150, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextTimer2 = CreateWindowEx(0, WC_STATIC, L"Timer 2", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 3, 150, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextTransparentBackground = CreateWindowEx(0, WC_STATIC, L"Transparent", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 4, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextCheckboxClickthrough = CreateWindowEx(0, WC_STATIC, L"Clickthrough", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 5, 150, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTextCheckboxClickthrough = CreateWindowEx(0, WC_STATIC, L"Clickthrough (resets when app is closed)", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 5, 150, 40, m_hwnd, 0, NULL, NULL);
 
 		// Initialize hotkey detectors
 		HWND hwndHotkeyStart = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 1, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_START, NULL, NULL);
@@ -417,6 +417,7 @@ private:
 
 	BOOL mouseDown = false;
 	int clickMousePos[2] = {0, 0};
+	bool resizing = false;
 
 	HRESULT CreateGraphicsResources()
 	{
@@ -489,7 +490,6 @@ private:
 				{
 					// Center the text horizontally and vertically.
 					pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-
 					pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 				}
 			}
@@ -569,16 +569,122 @@ private:
 		}
 	}
 
-	void HandleWindowDrag(LPARAM lParam)
-	{
+	void HandleMousemovement(LPARAM lParam) {
+		// variables
 		RECT windowPos;
 		GetWindowRect(m_hwnd, &windowPos);
 		int currPos[2] = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+		int width = windowPos.right - windowPos.left;
+		int height = windowPos.bottom - windowPos.top;
+		int spaceOffset = 8;
+		int dir = -1; // 0 = horizontal | 1 = vertical | 2 = corner
 
-		int xToMove = windowPos.left + (currPos[0] - clickMousePos[0]);
-		int yToMove = windowPos.top + (currPos[1] - clickMousePos[1]);
+		// check for resize coordinates
+		if (currPos[0] <= spaceOffset) // left
+		{
+			if (currPos[1] <= spaceOffset) { // top left
+				SetCursor(LoadCursor(NULL, IDC_SIZENWSE));
+				dir = 2;
+			}
+			else if (currPos[1] >= height - spaceOffset) { // bottom left
+				SetCursor(LoadCursor(NULL, IDC_SIZENESW));
+				dir = 2;
+			}
+			else { // left
+				SetCursor(LoadCursor(NULL, IDC_SIZEWE));
+				dir = 1;
+			}
+		}
+		else if (currPos[0] >= width - spaceOffset) { // right
+			if (currPos[1] <= spaceOffset) { // top right
+				SetCursor(LoadCursor(NULL, IDC_SIZENESW));
+				dir = 2;
+			}
+			else if (currPos[1] >= height - spaceOffset) { // bottom right
+				SetCursor(LoadCursor(NULL, IDC_SIZENWSE));
+				dir = 2;
+			}
+			else { // right
+				SetCursor(LoadCursor(NULL, IDC_SIZEWE));
+				dir = 1;
+			}
+		}
+		else if (currPos[1] >= height - spaceOffset || currPos[1] <= spaceOffset) { // top and bottom only
+			SetCursor(LoadCursor(NULL, IDC_SIZENS));
+			dir = 0;
+		}
+		else if (dir == -1) // if not hovering resize area:
+		{
+			SetCursor(LoadCursor(NULL, IDC_ARROW));
+			if (mouseDown && !resizing) // dragging the window
+			{
+				// drag window
+				int xToMove = windowPos.left + (currPos[0] - clickMousePos[0]);
+				int yToMove = windowPos.top + (currPos[1] - clickMousePos[1]);
 
-		SetWindowPos(m_hwnd, NULL, xToMove, yToMove, winSize[0], winSize[1], 0);
+				SetWindowPos(m_hwnd, NULL, xToMove, yToMove, winSize[0], winSize[1], 0);
+			}
+		}
+
+		if (mouseDown)
+		{  // fml this code is disgusting
+			int newWidth = winSize[0]; int newHeight = winSize[1];
+			int newX = windowPos.left; int newY = windowPos.top;
+
+			// resizing logic
+			switch (dir)
+			{
+			case 0: // horizontal
+				if (currPos[1] <= spaceOffset) // resetting size from the top side
+				{
+					newY = windowPos.top + (currPos[1] - clickMousePos[1]);
+					newHeight = max(25, (windowPos.bottom - windowPos.top) - (currPos[1] - clickMousePos[1]));
+				}
+				else // resetting size from the bottom side
+				{
+					newHeight = max(25, winSize[1] + currPos[1] - clickMousePos[1]);
+				}
+				break;
+			case 1: // vertical
+			{
+				if (currPos[0] <= spaceOffset) // resetting size from the left side
+				{
+					newX = windowPos.left + (currPos[0] - clickMousePos[0]);
+					newWidth = max(25, (windowPos.right - windowPos.left) - (currPos[0] - clickMousePos[0]));
+				}
+				else // resetting size from the right side
+				{
+					newWidth = max(25, winSize[0] + currPos[0] - clickMousePos[0]);
+				}
+
+			}
+				break;
+			case 2:
+				if (currPos[0] <= spaceOffset) // resetting size from the left side
+				{
+					newX = windowPos.left + (currPos[0] - clickMousePos[0]);
+					newWidth = max(25, (windowPos.right - windowPos.left) - (currPos[0] - clickMousePos[0]));
+				}
+				else // resetting size from the right side
+				{
+					newWidth = max(25, winSize[0] + currPos[0] - clickMousePos[0]);
+				}
+				if (currPos[1] <= spaceOffset) // resetting size from the top side
+				{
+					newY = windowPos.top + (currPos[1] - clickMousePos[1]);
+					newHeight = max(25, (windowPos.bottom - windowPos.top) - (currPos[1] - clickMousePos[1]));
+				}
+				else // resetting size from the bottom side
+				{
+					newHeight = max(25, winSize[1] + currPos[1] - clickMousePos[1]);
+				}
+				break;
+			}
+
+			if (dir != -1) {
+				SetWindowPos(m_hwnd, NULL, newX, newY, newWidth, newHeight, 0);
+			}
+		}
 	}
 
 public:
@@ -590,6 +696,9 @@ public:
 	LPCWSTR ClassName() const { return L"Main Window"; }
 	LRESULT HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 	{
+		RECT windowPos;
+		GetWindowRect(m_hwnd, &windowPos);
+
 		switch (wMsg)
 		{
 		case WM_CREATE:
@@ -605,18 +714,28 @@ public:
 			return 0;
 		case WM_LBUTTONDOWN:
 			mouseDown = true;
-			clickMousePos[0] = GET_X_LPARAM(lParam);
-			clickMousePos[1] = GET_Y_LPARAM(lParam);
+			clickMousePos[0] = GET_X_LPARAM(lParam); clickMousePos[1] = GET_Y_LPARAM(lParam);
+			resizing = (GetCursor() != LoadCursor(NULL, IDC_ARROW));
+			SetCapture(m_hwnd);
 			return 0;
 		case WM_LBUTTONUP:
 			mouseDown = false;
-			return 0;
-		case WM_MOUSEMOVE:
-			if (mouseDown)
-			{
-				HandleWindowDrag(lParam);
+			resizing = false;
+			ReleaseCapture();
+
+			// update winSize var after resizing
+			if (windowPos.right - windowPos.left != winSize[0]) {
+				winSize[0] = windowPos.right - windowPos.left;
+			}
+			if (windowPos.bottom - windowPos.top != winSize[1]) {
+				winSize[1] = windowPos.bottom - windowPos.top;
 			}
 			return 0;
+		case WM_MOUSEMOVE:
+		{
+			HandleMousemovement(lParam);
+			return 0;
+		}
 		case WM_COMMAND:
 			switch (wParam)
 			{
@@ -624,7 +743,7 @@ public:
 				if (pSettingsWindow->Window() == NULL) // dont create multiple settings windows
 				{
 					// Create and show settings window
-					if (!pSettingsWindow->Create(L"Settings", 500, 200, 350, 450, 0, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME, m_hwnd, 0, 0, NULL)) {
+					if (!pSettingsWindow->Create(L"Settings", 500, 200, 350, 450, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, 0, NULL)) {
 						return 0;
 					}
 
@@ -656,6 +775,8 @@ public:
 				TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_TOPALIGN, mouseX, mouseY, 0, m_hwnd, NULL);
 				return 0;
 			}
+		case WM_SETCURSOR: // disable default automatic cursor change (only manually set it)
+			return 0;
 		}
 		return DefWindowProc(Window(), wMsg, wParam, lParam);
 	}
