@@ -94,6 +94,17 @@ private:
 		return millis;
 	}
 
+public:
+	Timer() {
+		time = 0;
+		timerState = TimerState::zero;
+	}
+
+	TimerState GetTimerState()
+	{
+		return timerState;
+	}
+
 	wstring GetTimeAsText()
 	{
 		int minutesInt = 0;
@@ -161,17 +172,6 @@ private:
 		}
 
 		return text;
-	}
-
-public:
-	Timer() {
-		time = 0;
-		timerState = TimerState::zero;
-	}
-
-	TimerState GetTimerState()
-	{
-		return timerState;
 	}
 
 	int GetTimeInMillis()
@@ -533,7 +533,80 @@ private:
 			&pTextFormat
 		);
 
+		if (SUCCEEDED(hr))
+		{
+			// Center the text horizontally and vertically.
+			pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+			pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_FAR);
+		}
+
 		return hr;
+	}
+
+	int GetLargestFontsizeFit()
+	{
+		IDWriteTextFormat* pTempTextFormat;
+		IDWriteTextLayout* pTempTextLayout;
+
+		int minSize = 10; int maxSize = 100;
+		WCHAR fontFamily[] = L"Sitka";
+		bool conditionMet = false;
+		 
+		wchar_t text[] = L"";
+
+		while (!conditionMet)
+		{
+			HRESULT hr = pWriteFactory->CreateTextFormat(
+				fontFamily,
+				nullptr,
+				pTextFormat->GetFontWeight(),
+				pTextFormat->GetFontStyle(),
+				pTextFormat->GetFontStretch(),
+				maxSize,
+				L"",
+				&pTempTextFormat
+			);
+
+			if (FAILED(hr)) {
+				PostQuitMessage(0);
+			}
+
+			hr = pWriteFactory->CreateTextLayout(
+				text,
+				(UINT32)wcslen(text),
+				pTempTextFormat,
+				winSize[0],
+				winSize[1],
+				&pTempTextLayout
+			);
+
+			if (FAILED(hr)) {
+				PostQuitMessage(0);
+			}
+
+			// retrieve text size
+			DWRITE_TEXT_METRICS layoutMetrics;
+			hr = pTempTextLayout->GetMetrics(&layoutMetrics);
+
+			if (FAILED(hr)) {
+				PostQuitMessage(0);
+			}
+
+			if (layoutMetrics.width <= winSize[0] &&
+				layoutMetrics.height <= winSize[1])
+			{
+				conditionMet = true;
+			}
+			else
+			{
+				maxSize--;
+			}
+
+			SafeRelease(&pTempTextFormat);
+			SafeRelease(&pTempTextLayout);
+		}
+
+		return maxSize;
 	}
 
 	void DiscardGraphicsResources()
@@ -840,10 +913,12 @@ public:
 			if (windowPos.right - windowPos.left != winSize[0]) {
 				winSize[0] = windowPos.right - windowPos.left;
 				AdjustRendertargetSize();
+				ChangeFontSize(GetLargestFontsizeFit());
 			}
 			if (windowPos.bottom - windowPos.top != winSize[1]) {
 				winSize[1] = windowPos.bottom - windowPos.top;
 				AdjustRendertargetSize();
+				ChangeFontSize(GetLargestFontsizeFit());
 			}
 			return 0;
 		}

@@ -1,5 +1,5 @@
 {
-   "optionTransparent" : false,
+   "optionTransparent" : true,
    "start" : 70,
    "timer1" : 219,
    "timer2" : 221
