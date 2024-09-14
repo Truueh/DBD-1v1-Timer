@@ -6,6 +6,7 @@
 #include <dwrite.h>
 #include <windowsx.h>
 #include <commctrl.h>
+#include <ShellScalingApi.h>
 #include "helperFunctions.h"
 
 #pragma comment (lib, "d2d1")
@@ -18,6 +19,19 @@ enum TimerState
 	running,
 	paused,
 	zero
+};
+
+enum MousePos
+{
+	topLeft,
+	top,
+	topRight,
+	right,
+	bottomRight,
+	bottom,
+	bottomLeft,
+	left,
+	none
 };
 
 settingsStruct appSettings;
@@ -418,13 +432,15 @@ private:
 	BOOL mouseDown = false;
 	int clickMousePos[2] = {0, 0};
 	bool resizing = false;
+	int dir = -1;
+	int spaceOffset = 8;
 
 	HRESULT CreateGraphicsResources()
 	{
 		HRESULT hr = S_OK;
 		
 		// Set up render target and brush
-		if (pRenderTarget == NULL)
+		if (pRenderTarget == nullptr)
 		{
 			RECT rc;
 			GetClientRect(m_hwnd, &rc);
@@ -466,19 +482,21 @@ private:
 		// Set up write factory
 		if (pWriteFactory == NULL)
 		{
-			hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(pWriteFactory)
-				, reinterpret_cast<IUnknown**>(&pWriteFactory));
+			if (pWriteFactory == nullptr) {
+				hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(pWriteFactory)
+					, reinterpret_cast<IUnknown**>(&pWriteFactory));
+			}
 
-			// Set up text format
-			static const WCHAR fontName[] = L"Verdana";
-			static const FLOAT fontSize = 34;
-
-			if (SUCCEEDED(hr))
+			if (SUCCEEDED(hr) && pTextFormat == nullptr)
 			{
-				pWriteFactory->CreateTextFormat(
+				// Set up text format
+				static const WCHAR fontName[] = L"Sitka";
+				static const int fontSize = 34;
+
+				hr = pWriteFactory->CreateTextFormat(
 					fontName,
 					NULL,
-					DWRITE_FONT_WEIGHT_HEAVY,
+					DWRITE_FONT_WEIGHT_BOLD,
 					DWRITE_FONT_STYLE_NORMAL,
 					DWRITE_FONT_STRETCH_EXTRA_EXPANDED,
 					fontSize,
@@ -490,10 +508,30 @@ private:
 				{
 					// Center the text horizontally and vertically.
 					pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-					pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+					pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_FAR);
 				}
 			}
 		}
+
+		return hr;
+	}
+
+	HRESULT ChangeFontSize(int fontSize)
+	{
+		SafeRelease(&pTextFormat);
+
+		static const WCHAR fontName[] = L"Sitka";
+
+		HRESULT hr = pWriteFactory->CreateTextFormat(
+			fontName,
+			NULL,
+			DWRITE_FONT_WEIGHT_BOLD,
+			DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_EXTRA_EXPANDED,
+			fontSize,
+			L"",
+			&pTextFormat
+		);
 
 		return hr;
 	}
@@ -508,65 +546,111 @@ private:
 		SafeRelease(&pTextFormat);
 	}
 
+	void AdjustRendertargetSize()
+	{
+		D2D1_SIZE_U newSize = D2D1::SizeU(winSize[0], winSize[1]);
+		pRenderTarget->Resize(newSize);
+	}
+
+	MousePos GetMouseDir(LPARAM lParam, RECT windowPos) {
+		int currPos[2] = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+		int width = windowPos.right - windowPos.left;
+		int height = windowPos.bottom - windowPos.top;
+
+		if (currPos[0] <= spaceOffset) // left
+		{
+			if (currPos[1] <= spaceOffset) { // top left
+				return MousePos::topLeft;
+			}
+			else if (currPos[1] >= height - spaceOffset) { // bottom left
+				SetCursor(LoadCursor(NULL, IDC_SIZENESW));
+				return MousePos::bottomLeft;
+			}
+			else { // left
+				SetCursor(LoadCursor(NULL, IDC_SIZEWE));
+				return MousePos::left;
+			}
+		}
+		else if (currPos[0] >= width - spaceOffset) { // right
+			if (currPos[1] <= spaceOffset) { // top right
+				SetCursor(LoadCursor(NULL, IDC_SIZENESW));
+				return MousePos::topRight;
+			}
+			else if (currPos[1] >= height - spaceOffset) { // bottom right
+				SetCursor(LoadCursor(NULL, IDC_SIZENWSE));
+				return MousePos::bottomRight;
+			}
+			else { // right
+				SetCursor(LoadCursor(NULL, IDC_SIZEWE));
+				return MousePos::right;
+			}
+		}
+		else if (currPos[1] >= height - spaceOffset) { // bottom
+			SetCursor(LoadCursor(NULL, IDC_SIZENS));
+			return MousePos::bottom;
+		}
+		else if (currPos[1] <= spaceOffset) // top
+		{
+			return MousePos::top;
+		}
+
+		return MousePos::none;
+	}
+
 	void HandlePainting()
 	{
-		HRESULT hrGraphics = CreateGraphicsResources();
-		HRESULT hrWrite = CreateDeviceIndependentResources();
+		HRESULT hr;
+		PAINTSTRUCT ps;
+		BeginPaint(m_hwnd, &ps);
+		pRenderTarget->BeginDraw();
+		pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black, 0.0f));
 
-		if (SUCCEEDED(S_OK))
+		D2D1_RECT_F rect1 = D2D1::RectF(0, 0, winSize[0] / 2, winSize[1]);
+		D2D1_RECT_F rect2 = D2D1::RectF(winSize[0] / 2, 0, winSize[0], winSize[1]);
+
+		if (pWriteFactory != nullptr)
 		{
-			PAINTSTRUCT ps;
-			BeginPaint(m_hwnd, &ps);
-			pRenderTarget->BeginDraw();
-			pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black, 0.0f));
-
-			D2D1_RECT_F rect1 = D2D1::RectF(0, 0, winSize[0] / 2, winSize[1]);
-			D2D1_RECT_F rect2 = D2D1::RectF(winSize[0] / 2, 0, winSize[0], winSize[1]);
-
-			if (SUCCEEDED(hrWrite))
+			if (activeTimer != NULL)
 			{
-				if (activeTimer != NULL)
+				// Select color for timer 2
+				ID2D1SolidColorBrush* pBrushTimer2;
+				if (timer1.GetTimeInMillis() > 0
+					&& timer1.GetTimeInMillis() - timer2.GetTimeInMillis() <= 20000
+					&& (timer2.GetTimerState() == TimerState::running || timer2.GetTimerState() == TimerState::paused)
+					&& timer1.GetTimeInMillis() - timer2.GetTimeInMillis() > 0)
 				{
-					// Select color for timer 2
-					ID2D1SolidColorBrush* pBrushTimer2;
-					if (timer1.GetTimeInMillis() > 0
-						&& timer1.GetTimeInMillis() - timer2.GetTimeInMillis() <= 20000
-						&& (timer2.GetTimerState() == TimerState::running || timer2.GetTimerState() == TimerState::paused)
-						&& timer1.GetTimeInMillis() - timer2.GetTimeInMillis() > 0)
-					{
-						pBrushTimer2 = pBrushRed;
-					}
-					else if (activeTimer == &timer2) {
-						pBrushTimer2 = pBrushBlue;
-					}
-					else {
-						pBrushTimer2 = pBrushGreen;
-					}
-
-					// Draw timers
-					if (activeTimer == &timer1) {
-						timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushBlue);
-					}
-					else {
-						timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
-					}
-					timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushTimer2);
+					pBrushTimer2 = pBrushRed;
 				}
-				else
-				{
+				else if (activeTimer == &timer2) {
+					pBrushTimer2 = pBrushBlue;
+				}
+				else {
+					pBrushTimer2 = pBrushGreen;
+				}
+
+				// Draw timers
+				if (activeTimer == &timer1) {
+					timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushBlue);
+				}
+				else {
 					timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
-					timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushGreen);
 				}
+				timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushTimer2);
 			}
-
-			hrGraphics = pRenderTarget->EndDraw();
-
-			if (FAILED(hrGraphics) || hrGraphics == D2DERR_RECREATE_TARGET)
+			else
 			{
-				DiscardGraphicsResources();
+				timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
+				timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushGreen);
 			}
-			EndPaint(m_hwnd, &ps);
 		}
+
+		hr = pRenderTarget->EndDraw();
+
+		if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
+		{
+			DiscardGraphicsResources();
+		}
+		EndPaint(m_hwnd, &ps);
 	}
 
 	void HandleMousemovement(LPARAM lParam) {
@@ -575,47 +659,41 @@ private:
 		GetWindowRect(m_hwnd, &windowPos);
 		int currPos[2] = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 		int width = windowPos.right - windowPos.left;
-		int height = windowPos.bottom - windowPos.top;
-		int spaceOffset = 8;
-		int dir = -1; // 0 = horizontal | 1 = vertical | 2 = corner
+		int height = windowPos.bottom - windowPos.top;		
 
-		// check for resize coordinates
-		if (currPos[0] <= spaceOffset) // left
+		switch (GetMouseDir(lParam, windowPos))
 		{
-			if (currPos[1] <= spaceOffset) { // top left
-				SetCursor(LoadCursor(NULL, IDC_SIZENWSE));
-				dir = 2;
-			}
-			else if (currPos[1] >= height - spaceOffset) { // bottom left
-				SetCursor(LoadCursor(NULL, IDC_SIZENESW));
-				dir = 2;
-			}
-			else { // left
-				SetCursor(LoadCursor(NULL, IDC_SIZEWE));
-				dir = 1;
-			}
-		}
-		else if (currPos[0] >= width - spaceOffset) { // right
-			if (currPos[1] <= spaceOffset) { // top right
-				SetCursor(LoadCursor(NULL, IDC_SIZENESW));
-				dir = 2;
-			}
-			else if (currPos[1] >= height - spaceOffset) { // bottom right
-				SetCursor(LoadCursor(NULL, IDC_SIZENWSE));
-				dir = 2;
-			}
-			else { // right
-				SetCursor(LoadCursor(NULL, IDC_SIZEWE));
-				dir = 1;
-			}
-		}
-		else if (currPos[1] >= height - spaceOffset || currPos[1] <= spaceOffset) { // top and bottom only
+		case MousePos::topLeft:
+			SetCursor(LoadCursor(NULL, IDC_SIZENWSE));
+			break;
+		case MousePos::top:
 			SetCursor(LoadCursor(NULL, IDC_SIZENS));
-			dir = 0;
-		}
-		else if (dir == -1) // if not hovering resize area:
-		{
+			break;
+		case MousePos::topRight:
+			SetCursor(LoadCursor(NULL, IDC_SIZENESW));
+			break;
+		case MousePos::right:
+			SetCursor(LoadCursor(NULL, IDC_SIZEWE));
+			break;
+		case MousePos::bottomRight:
+			SetCursor(LoadCursor(NULL, IDC_SIZENWSE));
+			break;
+		case MousePos::bottom:
+			SetCursor(LoadCursor(NULL, IDC_SIZENS));
+			break;
+		case MousePos::bottomLeft:
+			SetCursor(LoadCursor(NULL, IDC_SIZENESW));
+			break;
+		case MousePos::left:
+			SetCursor(LoadCursor(NULL, IDC_SIZEWE));
+			break;
+		case MousePos::none:
 			SetCursor(LoadCursor(NULL, IDC_ARROW));
+			break;
+		}
+
+		if (dir == -1) // if not hovering resize area:
+		{
 			if (mouseDown && !resizing) // dragging the window
 			{
 				// drag window
@@ -626,8 +704,8 @@ private:
 			}
 		}
 
-		if (mouseDown)
-		{  // fml this code is disgusting
+		if (mouseDown && resizing) // if resizing
+		{
 			int newWidth = winSize[0]; int newHeight = winSize[1];
 			int newX = windowPos.left; int newY = windowPos.top;
 
@@ -638,11 +716,11 @@ private:
 				if (currPos[1] <= spaceOffset) // resetting size from the top side
 				{
 					newY = windowPos.top + (currPos[1] - clickMousePos[1]);
-					newHeight = max(25, (windowPos.bottom - windowPos.top) - (currPos[1] - clickMousePos[1]));
+					newHeight = windowPos.bottom - windowPos.top - (currPos[1] - clickMousePos[1]);
 				}
 				else // resetting size from the bottom side
 				{
-					newHeight = max(25, winSize[1] + currPos[1] - clickMousePos[1]);
+					newHeight = winSize[1] + currPos[1] - clickMousePos[1];
 				}
 				break;
 			case 1: // vertical
@@ -650,11 +728,11 @@ private:
 				if (currPos[0] <= spaceOffset) // resetting size from the left side
 				{
 					newX = windowPos.left + (currPos[0] - clickMousePos[0]);
-					newWidth = max(25, (windowPos.right - windowPos.left) - (currPos[0] - clickMousePos[0]));
+					newWidth = (windowPos.right - windowPos.left) - (currPos[0] - clickMousePos[0]);
 				}
 				else // resetting size from the right side
 				{
-					newWidth = max(25, winSize[0] + currPos[0] - clickMousePos[0]);
+					newWidth = winSize[0] + currPos[0] - clickMousePos[0];
 				}
 
 			}
@@ -663,25 +741,27 @@ private:
 				if (currPos[0] <= spaceOffset) // resetting size from the left side
 				{
 					newX = windowPos.left + (currPos[0] - clickMousePos[0]);
-					newWidth = max(25, (windowPos.right - windowPos.left) - (currPos[0] - clickMousePos[0]));
+					newWidth = (windowPos.right - windowPos.left) - (currPos[0] - clickMousePos[0]);
 				}
 				else // resetting size from the right side
 				{
-					newWidth = max(25, winSize[0] + currPos[0] - clickMousePos[0]);
+					newWidth = winSize[0] + currPos[0] - clickMousePos[0];
 				}
 				if (currPos[1] <= spaceOffset) // resetting size from the top side
 				{
 					newY = windowPos.top + (currPos[1] - clickMousePos[1]);
-					newHeight = max(25, (windowPos.bottom - windowPos.top) - (currPos[1] - clickMousePos[1]));
+					newHeight = (windowPos.bottom - windowPos.top) - (currPos[1] - clickMousePos[1]);
 				}
 				else // resetting size from the bottom side
 				{
-					newHeight = max(25, winSize[1] + currPos[1] - clickMousePos[1]);
+					newHeight = winSize[1] + currPos[1] - clickMousePos[1];
 				}
 				break;
 			}
 
-			if (dir != -1) {
+			if (dir != -1) { // window was resized
+				newWidth = max(25, min(700, newWidth));
+				newHeight = max(25, min(700, newHeight));
 				SetWindowPos(m_hwnd, NULL, newX, newY, newWidth, newHeight, 0);
 			}
 		}
@@ -702,41 +782,78 @@ public:
 		switch (wMsg)
 		{
 		case WM_CREATE:
+		{
 			if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &pFactory))) {
 				return -1;
+			}
+			else {
+				CreateGraphicsResources();
+				CreateDeviceIndependentResources();
 			}
 			appSettings = getSettingsStruct();
 			appRunning = true;
 			return 0;
+		}
 		case WM_DESTROY:
+		{
 			PostQuitMessage(0);
 			appRunning = false;
 			return 0;
+		}
 		case WM_LBUTTONDOWN:
+		{
 			mouseDown = true;
 			clickMousePos[0] = GET_X_LPARAM(lParam); clickMousePos[1] = GET_Y_LPARAM(lParam);
 			resizing = (GetCursor() != LoadCursor(NULL, IDC_ARROW));
+			MousePos mPos = GetMouseDir(lParam, windowPos);
+			
+			// set drag direction according to mouse position
+			if (mPos == MousePos::topRight || mPos == MousePos::topLeft ||
+				mPos == MousePos::bottomLeft || mPos == MousePos::bottomRight)
+			{
+				dir = 2;
+			}
+			else if (mPos == MousePos::right || mPos == MousePos::left)
+			{
+				dir = 1;
+			}
+			else if (mPos == MousePos::top || mPos == MousePos::bottom)
+			{
+				dir = 0;
+			}
+			else
+			{
+				dir = -1;
+			}
+
 			SetCapture(m_hwnd);
 			return 0;
+		}
 		case WM_LBUTTONUP:
+		{
 			mouseDown = false;
 			resizing = false;
+			dir = -1;
 			ReleaseCapture();
 
 			// update winSize var after resizing
 			if (windowPos.right - windowPos.left != winSize[0]) {
 				winSize[0] = windowPos.right - windowPos.left;
+				AdjustRendertargetSize();
 			}
 			if (windowPos.bottom - windowPos.top != winSize[1]) {
 				winSize[1] = windowPos.bottom - windowPos.top;
+				AdjustRendertargetSize();
 			}
 			return 0;
+		}
 		case WM_MOUSEMOVE:
 		{
 			HandleMousemovement(lParam);
 			return 0;
 		}
 		case WM_COMMAND:
+		{
 			switch (wParam)
 			{
 			case MENU_SETTINGS:
@@ -760,6 +877,7 @@ public:
 				return 0;
 			}
 			return 0;
+		}
 		case WM_CONTEXTMENU:
 			{
 				// mouse pos
@@ -775,7 +893,8 @@ public:
 				TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_TOPALIGN, mouseX, mouseY, 0, m_hwnd, NULL);
 				return 0;
 			}
-		case WM_SETCURSOR: // disable default automatic cursor change (only manually set it)
+		case WM_SETCURSOR: 
+			// disable default automatic cursor change (only manually set it)
 			return 0;
 		}
 		return DefWindowProc(Window(), wMsg, wParam, lParam);
