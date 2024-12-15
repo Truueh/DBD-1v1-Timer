@@ -16,11 +16,23 @@ settingsStruct getSettingsStruct()
 	
 	reader.parse(file, actualJson);
 
+	// hotkeys
 	settings.startKey = actualJson["start"].asInt();
 	settings.timer1Key = actualJson["timer1"].asInt();
 	settings.timer2Key = actualJson["timer2"].asInt();
+
+	// options
 	settings.optionTransparent = actualJson["optionTransparent"].asBool();
 	settings.clickthrough = false;
+
+	// colors
+	Json::Value colors = actualJson["colors"];
+	settings.colors.timerColor = colors["timer"].asInt();
+	settings.colors.selectedTimerColor = colors["selected timer"].asInt();
+	settings.colors.lastSecondsColor = colors["last seconds"].asInt();
+	settings.colors.backgroundColor = colors["background"].asInt();
+
+
 	return settings;
 }
 
@@ -39,6 +51,10 @@ void setSettingsStruct(settingsStruct settings)
 	settingsJson["timer1"] = settings.timer1Key;
 	settingsJson["timer2"] = settings.timer2Key;
 	settingsJson["optionTransparent"] = settings.optionTransparent;
+	settingsJson["colors"]["timer"] = settings.colors.timerColor;
+	settingsJson["colors"]["selected timer"] = settings.colors.selectedTimerColor;
+	settingsJson["colors"]["last seconds"] = settings.colors.lastSecondsColor;
+	settingsJson["colors"]["background"] = settings.colors.backgroundColor;
 
 	// Write to file
 	Json::StreamWriterBuilder builder;

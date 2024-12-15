@@ -1,5 +1,12 @@
 {
-   "optionTransparent" : true,
+   "colors" : 
+   {
+      "background" : 20,
+      "last seconds" : 0,
+      "selected timer" : 6,
+      "timer" : 8
+   },
+   "optionTransparent" : false,
    "start" : 70,
    "timer1" : 219,
    "timer2" : 221
