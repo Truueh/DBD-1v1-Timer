@@ -7,7 +7,7 @@
 using namespace std;
 
 // Retrieve settings information from json file
-settingsStruct getSettingsStruct()
+settingsStruct getSafeSettingsStruct()
 {
 	ifstream file("settings.json");
 	Json::Value actualJson;
@@ -17,20 +17,54 @@ settingsStruct getSettingsStruct()
 	reader.parse(file, actualJson);
 
 	// hotkeys
-	settings.startKey = actualJson["start"].asInt();
-	settings.timer1Key = actualJson["timer1"].asInt();
-	settings.timer2Key = actualJson["timer2"].asInt();
+	if (actualJson["start"].isInt() && actualJson["timer1"].isInt() && actualJson["timer2"].isInt())
+	{
+		settings.startKey = actualJson["start"].asInt();
+		settings.timer1Key = actualJson["timer1"].asInt();
+		settings.timer2Key = actualJson["timer2"].asInt();
+	}
+	else
+	{
+		settings.startKey = 70;
+		settings.timer1Key = 112;
+		settings.timer2Key = 113;
+	}
 
 	// options
-	settings.optionTransparent = actualJson["optionTransparent"].asBool();
+	if (actualJson["optionTransparent"].isBool()) {
+		settings.optionTransparent = actualJson["optionTransparent"].asBool();
+	}
+	else {
+		settings.optionTransparent = false;
+	}
 	settings.clickthrough = false;
 
 	// colors
 	Json::Value colors = actualJson["colors"];
-	settings.colors.timerColor = colors["timer"].asInt();
-	settings.colors.selectedTimerColor = colors["selected timer"].asInt();
-	settings.colors.lastSecondsColor = colors["last seconds"].asInt();
-	settings.colors.backgroundColor = colors["background"].asInt();
+	if (colors["timer"].isInt() && colors["selected timer"].isInt()
+		&& colors["last seconds"].isInt() && colors["background"].isInt())
+	{
+		settings.colors.timerColor = colors["timer"].asInt();
+		settings.colors.selectedTimerColor = colors["selected timer"].asInt();
+		settings.colors.lastSecondsColor = colors["last seconds"].asInt();
+		settings.colors.backgroundColor = colors["background"].asInt();
+
+		if (settings.colors.timerColor > 24 || settings.colors.selectedTimerColor > 24 ||
+			settings.colors.lastSecondsColor > 24 || settings.colors.backgroundColor > 24)
+		{
+			settings.colors.timerColor = 8;
+			settings.colors.selectedTimerColor = 6;
+			settings.colors.lastSecondsColor = 1;
+			settings.colors.backgroundColor = 20;
+		}
+	}
+	else 
+	{
+		settings.colors.timerColor = 8;
+		settings.colors.selectedTimerColor = 6;
+		settings.colors.lastSecondsColor = 1;
+		settings.colors.backgroundColor = 20;
+	}
 
 
 	return settings;
@@ -71,7 +105,7 @@ void createSettingsFile()
 {
 	ofstream file("settings.json");
 
-	string json = "{\n\"start\": 70,\n\"timer1\": 112,\n\"timer2\": 113\n}";
+	string json = "{\n   \"colors\" : \n   {\n      \"background\" : 20,\n      \"last seconds\" : 1,\n      \"selected timer\" : 6,\n      \"timer\" : 8\n   },\n   \"optionTransparent\" : false,\n   \"start\" : 70,\n   \"timer1\" : 112,\n   \"timer2\" : 113\n}";
 
 	file << json;
 

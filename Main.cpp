@@ -40,8 +40,6 @@ HWND hwndMainWindow = nullptr;
 
 HBRUSH hBrushes[25];
 
-class MainWindow;
-
 void InitializeBrushes()
 {
 	COLORREF colors[25] = {
@@ -58,6 +56,8 @@ void InitializeBrushes()
 	}
 }
 
+class MainWindow;
+
 void ApplySettings(settingsStruct settings) {
 	setSettingsStruct(settings);
 	appSettings = settings;
@@ -65,10 +65,10 @@ void ApplySettings(settingsStruct settings) {
 	if (hwndMainWindow != NULL) {
 		// transparency
 		if (appSettings.optionTransparent) { // add transparent effect
-			SetLayeredWindowAttributes(hwndMainWindow, 0, 255, LWA_COLORKEY | LWA_ALPHA);
+			SetLayeredWindowAttributes(hwndMainWindow, 0, 0, LWA_COLORKEY);
 		}
 		else { // remove transparent effect
-			SetLayeredWindowAttributes(hwndMainWindow, 1, 255, LWA_COLORKEY | LWA_ALPHA);
+			SetLayeredWindowAttributes(hwndMainWindow, 0, 255, LWA_ALPHA);
 		}
 
 		// clickthrough
@@ -483,7 +483,7 @@ private:
 	void InitializeWindow()
 	{
 		// retrieve settings
-		tempSettings = getSettingsStruct();
+		tempSettings = getSafeSettingsStruct();
 
 		// preset values
 		int xTitle = 15;
@@ -660,6 +660,7 @@ class MainWindow : public BaseWindow<MainWindow>
 	ID2D1SolidColorBrush* pBrushTimer;
 	ID2D1SolidColorBrush* pBrushSelectedTimer;
 	ID2D1SolidColorBrush* pBrushLastSeconds;
+	D2D1_COLOR_F backgroundColor;
 
 	// Writing Resources
 	IDWriteFactory* pWriteFactory;
@@ -702,21 +703,12 @@ private:
 
 			if (SUCCEEDED(hr)) {
 				// Extract ColorF from HBRUSH
-				settingsStruct settings = getSettingsStruct();
+				settingsStruct settings = getSafeSettingsStruct();
 
-				LOGBRUSH logBrush;
-
-				GetObject(hBrushes[settings.colors.timerColor], sizeof(LOGBRUSH), &logBrush);
-				COLORREF color = logBrush.lbColor; // Extract COLORREF
-				D2D1_COLOR_F timerColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
-
-				GetObject(hBrushes[settings.colors.selectedTimerColor], sizeof(LOGBRUSH), &logBrush);
-				color = logBrush.lbColor; // Extract COLORREF
-				D2D1_COLOR_F selectedTimerColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
-
-				GetObject(hBrushes[settings.colors.lastSecondsColor], sizeof(LOGBRUSH), &logBrush);
-				color = logBrush.lbColor; // Extract COLORREF
-				D2D1_COLOR_F lastSecondsColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
+				D2D1_COLOR_F timerColor = HBRUSHtoCOLORF(hBrushes[settings.colors.timerColor]);
+				D2D1_COLOR_F selectedTimerColor = HBRUSHtoCOLORF(hBrushes[settings.colors.selectedTimerColor]);
+				D2D1_COLOR_F lastSecondsColor = HBRUSHtoCOLORF(hBrushes[settings.colors.lastSecondsColor]);
+				backgroundColor = HBRUSHtoCOLORF(hBrushes[settings.colors.backgroundColor]);
 
 				// timer color brush
 				hr = pRenderTarget->CreateSolidColorBrush(timerColor, &pBrushTimer);
@@ -933,7 +925,14 @@ private:
 		PAINTSTRUCT ps;
 		BeginPaint(m_hwnd, &ps);
 		pRenderTarget->BeginDraw();
-		pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black, 0.0f));
+
+		// workaround to visible edges issue while transparent
+		if (appSettings.optionTransparent) {
+			pRenderTarget->Clear(D2D1::ColorF(0, 0, 0));
+		}
+		else {
+			pRenderTarget->Clear(backgroundColor);
+		}
 
 		D2D1_RECT_F rect1 = D2D1::RectF(0, 0, winSize[0] / 2, winSize[1]);
 		D2D1_RECT_F rect2 = D2D1::RectF(winSize[0] / 2, 0, winSize[0], winSize[1]);
@@ -1097,30 +1096,33 @@ private:
 		}
 	}
 
+	D2D1_COLOR_F HBRUSHtoCOLORF(HBRUSH hBrush) {
+		LOGBRUSH logBrush;
+
+		// timer color
+		GetObject(hBrush, sizeof(LOGBRUSH), &logBrush);
+		COLORREF color = logBrush.lbColor; // Extract COLORREF
+		return D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
+	}
+
 	void RefreshBrushes()
 	{
 		// retrieve brushes colors
-		settingsStruct settings = getSettingsStruct();
+		settingsStruct settings = getSafeSettingsStruct();
 
 		LOGBRUSH logBrush;
 
 		// timer color
-		GetObject(hBrushes[settings.colors.timerColor], sizeof(LOGBRUSH), &logBrush);
-		COLORREF color = logBrush.lbColor; // Extract COLORREF
-		D2D1_COLOR_F timerColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
-		pBrushTimer->SetColor(timerColor);
+		pBrushTimer->SetColor(HBRUSHtoCOLORF(hBrushes[settings.colors.timerColor]));
 
 		// selected timer color
-		GetObject(hBrushes[settings.colors.selectedTimerColor], sizeof(LOGBRUSH), &logBrush);
-		color = logBrush.lbColor; // Extract COLORREF
-		D2D1_COLOR_F selectedTimerColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
-		pBrushSelectedTimer->SetColor(selectedTimerColor);
+		pBrushSelectedTimer->SetColor(HBRUSHtoCOLORF(hBrushes[settings.colors.selectedTimerColor]));
 
 		// last seconds color
-		GetObject(hBrushes[settings.colors.lastSecondsColor], sizeof(LOGBRUSH), &logBrush);
-		color = logBrush.lbColor; // Extract COLORREF
-		D2D1_COLOR_F lastSecondsColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
-		pBrushLastSeconds->SetColor(lastSecondsColor);
+		pBrushLastSeconds->SetColor(HBRUSHtoCOLORF(hBrushes[settings.colors.lastSecondsColor]));
+
+		// background color
+		backgroundColor = HBRUSHtoCOLORF(hBrushes[settings.colors.backgroundColor]);
 	}
 
 public:
@@ -1146,7 +1148,7 @@ public:
 				CreateGraphicsResources();
 				CreateDeviceIndependentResources();
 			}
-			appSettings = getSettingsStruct();
+			appSettings = getSafeSettingsStruct();
 			appRunning = true;
 			return 0;
 		}

@@ -49,7 +49,7 @@ struct settingsStruct
 };
 
 // HelperFunctions.cpp functions
-settingsStruct getSettingsStruct();
+settingsStruct getSafeSettingsStruct();
 
 void setSettingsStruct(settingsStruct settings);
 

@@ -2,12 +2,12 @@
    "colors" : 
    {
       "background" : 20,
-      "last seconds" : 0,
+      "last seconds" : 1,
       "selected timer" : 6,
       "timer" : 8
    },
    "optionTransparent" : false,
    "start" : 70,
-   "timer1" : 219,
-   "timer2" : 221
+   "timer1" : 112,
+   "timer2" : 113
 }
