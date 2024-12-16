@@ -40,6 +40,8 @@ HWND hwndMainWindow = nullptr;
 
 HBRUSH hBrushes[25];
 
+class MainWindow;
+
 void InitializeBrushes()
 {
 	COLORREF colors[25] = {
@@ -56,7 +58,35 @@ void InitializeBrushes()
 	}
 }
 
-class MainWindow;
+BOOL CALLBACK ControlProc(HWND hControl, LPARAM lParam)
+{
+	HFONT hFont = (HFONT)lParam;
+	SendMessage(hControl, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+	return true;
+}
+
+void SetTitleFont(HWND hControl)
+{
+	HFONT hFont = CreateFont(
+		16, 0, 0, 0, FW_BLACK, FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"
+	);
+
+	SendMessage(hControl, WM_SETFONT, (WPARAM)hFont, TRUE);
+}
+
+void SetControlsFont(HWND hWnd)
+{
+	HFONT hFont = CreateFont(
+		16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"
+	);
+
+	EnumChildWindows(hWnd, ControlProc, (LPARAM)hFont);
+}
 
 void ApplySettings(settingsStruct settings) {
 	setSettingsStruct(settings);
@@ -383,6 +413,8 @@ private:
 		// Initialize exit controls
 		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, SIZE_COLORPICKER_WIDTH - 150, SIZE_COLORPICKER_HEIGHT - 70, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL);
 		HWND hwndCancelButton = CreateWindowEx(0, WC_BUTTON, L"CANCEL", WS_VISIBLE | WS_CHILDWINDOW, SIZE_COLORPICKER_WIDTH - 90, SIZE_COLORPICKER_HEIGHT - 70, 70, 25, m_hwnd, (HMENU)CID_CANCEL, NULL, NULL);
+	
+		SetControlsFont(m_hwnd);
 	}
 
 	void UpdateSettings()
@@ -494,18 +526,21 @@ private:
 		int heightHotkey = 25;
 		int sizeCheckbox = 40; // mostly irrelevant since there is no text
 
+		// Copyright
+		HWND hwndCopyright = CreateWindowEx(0, WC_STATIC, L"© Truueh 2024", WS_VISIBLE | WS_CHILDWINDOW, 10, SIZE_SETTINGS_HEIGHT - 65, 100, 40, m_hwnd, 0, NULL, NULL);
+
 		// Initialize headers
 		HWND hwndTitleHotkeys = CreateWindowEx(0, WC_STATIC, L"Hotkeys", WS_VISIBLE | WS_CHILDWINDOW, SIZE_SETTINGS_WIDTH / 2 - 40, 5, 60, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTitleColors = CreateWindowEx(0, WC_STATIC, L"Colors", WS_VISIBLE | WS_CHILDWINDOW, SIZE_SETTINGS_WIDTH / 2 - 40, yOffset * 7, 60, 40, m_hwnd, 0, NULL, NULL);
 
-		// Hotkey names
+		// Hotkey titles
 		HWND hwndTextStart = CreateWindowEx(0, WC_STATIC, L"Start / Stop / Reset", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 1, 150, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextTimer1 = CreateWindowEx(0, WC_STATIC, L"Timer 1", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 2, 150, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextTimer2 = CreateWindowEx(0, WC_STATIC, L"Timer 2", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 3, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextTransparentBackground = CreateWindowEx(0, WC_STATIC, L"Transparent", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 4, 150, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTextTransparentBackground = CreateWindowEx(0, WC_STATIC, L"Transparent Background", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 4, 150, 40, m_hwnd, 0, NULL, NULL);
 		HWND hwndTextCheckboxClickthrough = CreateWindowEx(0, WC_STATIC, L"Clickthrough (resets when app is closed)", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 5, 150, 40, m_hwnd, 0, NULL, NULL);
 
-		// Hotkey detectors
+		// Hotkey buttons
 		HWND hwndHotkeyStart = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 1, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_START, NULL, NULL);
 		HWND hwndHotkeyTimer1 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 2, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER1, NULL, NULL);
 		HWND hwndHotkeyTimer2 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 3, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER2, NULL, NULL);
@@ -537,6 +572,23 @@ private:
 		SendMessage(hwndHotkeyTimer2, HKM_SETHOTKEY, appSettings.timer2Key, 0);
 		SendMessage(hwndCheckboxTransparentBackground, BM_SETCHECK, appSettings.optionTransparent, 0);
 		SendMessage(hwndCheckboxClickthrough, BM_SETCHECK, appSettings.clickthrough, 0);
+
+		// Apply fonts
+		SetControlsFont(m_hwnd);
+		SetTitleFont(hwndTitleColors);
+		SetTitleFont(hwndTitleHotkeys);
+		SetCopyrightFont(hwndCopyright);
+	}
+
+	void SetCopyrightFont(HWND hControl)
+	{
+		HFONT hFont = CreateFont(
+			14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+			DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"
+		);
+
+		SendMessage(hControl, WM_SETFONT, (WPARAM)hFont, TRUE);
 	}
 
 	void HandleControlCommand(LPARAM lParam)
@@ -581,7 +633,7 @@ private:
 				pColorPicker->controlID = controlID;
 				pColorPicker->pTempSettings = &tempSettings;
 
-				if (!pColorPicker->Create(L"Color Picker", 400, 500, SIZE_COLORPICKER_WIDTH, SIZE_COLORPICKER_HEIGHT, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, NULL)) {
+				if (!pColorPicker->Create(L"Color Picker", 850, 300, SIZE_COLORPICKER_WIDTH, SIZE_COLORPICKER_HEIGHT, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, NULL)) {
 					return;
 				}
 				ShowWindow(pColorPicker->Window(), SW_SHOW);
@@ -1220,7 +1272,7 @@ public:
 				if (pSettingsWindow->Window() == NULL) // dont create multiple settings windows
 				{
 					// Create and show settings window
-					if (!pSettingsWindow->Create(L"Settings", 500, 200, SIZE_SETTINGS_WIDTH, SIZE_SETTINGS_HEIGHT, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, 0, NULL)) {
+					if (!pSettingsWindow->Create(L"Settings - Version 1.1", 500, 200, SIZE_SETTINGS_WIDTH, SIZE_SETTINGS_HEIGHT, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, 0, NULL)) {
 						return 0;
 					}
 
