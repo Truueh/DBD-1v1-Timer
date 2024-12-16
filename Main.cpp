@@ -354,15 +354,31 @@ private:
 
 		// Preview Color
 		hPreviewColorButton = CreateWindowEx(0, WC_BUTTON, L"", WS_VISIBLE | WS_CHILD | BS_OWNERDRAW, 105, 210, 40, 40, m_hwnd, (HMENU)COLOR_PREVIEW, NULL, NULL);
+		switch (controlID)
+		{
+		case COLOR_CTR_TIMER:
+			hPreviewColor = hBrushes[pTempSettings->colors.timerColor];
+			previewColorIndex = pTempSettings->colors.timerColor;
+			break;
+		case COLOR_CTR_SELECTED_TIMER:
+			hPreviewColor = hBrushes[pTempSettings->colors.selectedTimerColor];
+			previewColorIndex = pTempSettings->colors.selectedTimerColor;
+			break;
+		case COLOR_CTR_LAST_SECONDS:
+			hPreviewColor = hBrushes[pTempSettings->colors.lastSecondsColor];
+			previewColorIndex = pTempSettings->colors.lastSecondsColor;
+			break;
+		case COLOR_CTR_BACKGROUND:
+			hPreviewColor = hBrushes[pTempSettings->colors.backgroundColor];
+			previewColorIndex = pTempSettings->colors.backgroundColor;
+			break;
+		}
 	}
 
 	void InitializeWindow()
 	{
 		InitializeColorButtons();
 		InitializeBrushes();
-
-		// TEMP
-		hPreviewColor = hBrushes[0];
 
 		// Initialize exit controls
 		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, SIZE_COLORPICKER_WIDTH - 150, SIZE_COLORPICKER_HEIGHT - 70, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL);
@@ -387,7 +403,7 @@ private:
 			break;
 		}
 
-		InvalidateRect(GetParent(m_hwnd), NULL, true);
+		RedrawWindow(GetWindow(m_hwnd, GW_OWNER), NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
 	}
 
 	void HandleControlCommand(LPARAM lParam)
@@ -401,8 +417,8 @@ private:
 		{
 			hPreviewColor = hBrushes[CID];
 			previewColorIndex = CID;
-			InvalidateRect(hPreviewColorButton, NULL, TRUE);
-			UpdateWindow(hPreviewColorButton);
+			RedrawWindow(m_hwnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+			return;
 		}
 
 		// clicked some other control
@@ -410,7 +426,6 @@ private:
 		{
 		case CID_OK:
 			UpdateSettings();
-			
 			DestroyWindow(m_hwnd);
 			break;
 		case CID_CANCEL:
@@ -534,6 +549,7 @@ private:
 		{
 		case CID_OK: // ok
 			ApplySettings(tempSettings);
+			SendMessage(GetWindow(m_hwnd, GW_OWNER), REFRESH_BRUSHES, 0, 0);
 			DestroyWindow(m_hwnd);
 			break;
 		case CID_CANCEL: // cancel
@@ -562,12 +578,12 @@ private:
 			// open a Color Picker window
 			if (pColorPicker->Window() == NULL)
 			{
+				pColorPicker->controlID = controlID;
+				pColorPicker->pTempSettings = &tempSettings;
+
 				if (!pColorPicker->Create(L"Color Picker", 400, 500, SIZE_COLORPICKER_WIDTH, SIZE_COLORPICKER_HEIGHT, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, NULL)) {
 					return;
 				}
-
-				pColorPicker->controlID = controlID;
-				pColorPicker->pTempSettings = &tempSettings;
 				ShowWindow(pColorPicker->Window(), SW_SHOW);
 			}
 			else
@@ -626,7 +642,6 @@ public:
 		case WM_DRAWITEM:
 		{
 			ColorHandles(lParam);
-
 			return TRUE;
 		}
 		}
@@ -642,9 +657,9 @@ class MainWindow : public BaseWindow<MainWindow>
 	// Resources
 	ID2D1Factory* pFactory;
 	ID2D1HwndRenderTarget* pRenderTarget = nullptr;
-	ID2D1SolidColorBrush* pBrushGreen;
-	ID2D1SolidColorBrush* pBrushBlue;
-	ID2D1SolidColorBrush* pBrushRed;
+	ID2D1SolidColorBrush* pBrushTimer;
+	ID2D1SolidColorBrush* pBrushSelectedTimer;
+	ID2D1SolidColorBrush* pBrushLastSeconds;
 
 	// Writing Resources
 	IDWriteFactory* pWriteFactory;
@@ -686,14 +701,31 @@ private:
 			);
 
 			if (SUCCEEDED(hr)) {
-				const D2D1_COLOR_F greenColor = D2D1::ColorF(0.0f, 1, 0.4f);
-				hr = pRenderTarget->CreateSolidColorBrush(greenColor, &pBrushGreen);
+				// Extract ColorF from HBRUSH
+				settingsStruct settings = getSettingsStruct();
 
-				const D2D1_COLOR_F blueColor = D2D1::ColorF(0.0f, 0.6f, 1);
-				hr = pRenderTarget->CreateSolidColorBrush(blueColor, &pBrushBlue);
+				LOGBRUSH logBrush;
 
-				const D2D1_COLOR_F redColor = D2D1::ColorF(1, 0.3f, 0.3f);
-				hr = pRenderTarget->CreateSolidColorBrush(redColor, &pBrushRed);
+				GetObject(hBrushes[settings.colors.timerColor], sizeof(LOGBRUSH), &logBrush);
+				COLORREF color = logBrush.lbColor; // Extract COLORREF
+				D2D1_COLOR_F timerColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
+
+				GetObject(hBrushes[settings.colors.selectedTimerColor], sizeof(LOGBRUSH), &logBrush);
+				color = logBrush.lbColor; // Extract COLORREF
+				D2D1_COLOR_F selectedTimerColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
+
+				GetObject(hBrushes[settings.colors.lastSecondsColor], sizeof(LOGBRUSH), &logBrush);
+				color = logBrush.lbColor; // Extract COLORREF
+				D2D1_COLOR_F lastSecondsColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
+
+				// timer color brush
+				hr = pRenderTarget->CreateSolidColorBrush(timerColor, &pBrushTimer);
+
+				// selected timer color brush
+				hr = pRenderTarget->CreateSolidColorBrush(selectedTimerColor, &pBrushSelectedTimer);
+
+				// last seconds color brush
+				hr = pRenderTarget->CreateSolidColorBrush(lastSecondsColor, &pBrushLastSeconds);
 			}
 		}
 
@@ -837,9 +869,9 @@ private:
 	void DiscardGraphicsResources()
 	{
 		SafeRelease(&pRenderTarget);
-		SafeRelease(&pBrushGreen);
-		SafeRelease(&pBrushBlue);
-		SafeRelease(&pBrushRed);
+		SafeRelease(&pBrushTimer);
+		SafeRelease(&pBrushSelectedTimer);
+		SafeRelease(&pBrushLastSeconds);
 		SafeRelease(&pWriteFactory);
 		SafeRelease(&pTextFormat);
 	}
@@ -917,28 +949,28 @@ private:
 					&& (timer2.GetTimerState() == TimerState::running || timer2.GetTimerState() == TimerState::paused)
 					&& timer1.GetTimeInMillis() - timer2.GetTimeInMillis() > 0)
 				{
-					pBrushTimer2 = pBrushRed;
+					pBrushTimer2 = pBrushLastSeconds;
 				}
 				else if (activeTimer == &timer2) {
-					pBrushTimer2 = pBrushBlue;
+					pBrushTimer2 = pBrushSelectedTimer;
 				}
 				else {
-					pBrushTimer2 = pBrushGreen;
+					pBrushTimer2 = pBrushTimer;
 				}
 
 				// Draw timers
 				if (activeTimer == &timer1) {
-					timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushBlue);
+					timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushSelectedTimer);
 				}
 				else {
-					timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
+					timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushTimer);
 				}
 				timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushTimer2);
 			}
 			else
 			{
-				timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushGreen);
-				timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushGreen);
+				timer1.Draw(pRenderTarget, pTextFormat, rect1, pBrushTimer);
+				timer2.Draw(pRenderTarget, pTextFormat, rect2, pBrushTimer);
 			}
 		}
 
@@ -1063,6 +1095,32 @@ private:
 				SetWindowPos(m_hwnd, NULL, newX, newY, newWidth, newHeight, 0);
 			}
 		}
+	}
+
+	void RefreshBrushes()
+	{
+		// retrieve brushes colors
+		settingsStruct settings = getSettingsStruct();
+
+		LOGBRUSH logBrush;
+
+		// timer color
+		GetObject(hBrushes[settings.colors.timerColor], sizeof(LOGBRUSH), &logBrush);
+		COLORREF color = logBrush.lbColor; // Extract COLORREF
+		D2D1_COLOR_F timerColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
+		pBrushTimer->SetColor(timerColor);
+
+		// selected timer color
+		GetObject(hBrushes[settings.colors.selectedTimerColor], sizeof(LOGBRUSH), &logBrush);
+		color = logBrush.lbColor; // Extract COLORREF
+		D2D1_COLOR_F selectedTimerColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
+		pBrushSelectedTimer->SetColor(selectedTimerColor);
+
+		// last seconds color
+		GetObject(hBrushes[settings.colors.lastSecondsColor], sizeof(LOGBRUSH), &logBrush);
+		color = logBrush.lbColor; // Extract COLORREF
+		D2D1_COLOR_F lastSecondsColor = D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f);
+		pBrushLastSeconds->SetColor(lastSecondsColor);
 	}
 
 public:
@@ -1196,6 +1254,9 @@ public:
 		case WM_SETCURSOR: 
 			// disable default automatic cursor change (only manually set it)
 			return 0;
+		case REFRESH_BRUSHES:
+			RefreshBrushes();
+			break;
 		}
 		return DefWindowProc(Window(), wMsg, wParam, lParam);
 	}
@@ -1246,7 +1307,7 @@ void AppLoop(MainWindow* win)
 	}
 }
 
-// The hook procedure to listen for kestrokes f1, f2 and f
+// The hook procedure to listen for key strokes f1, f2 and f
 LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	if (wParam == WM_KEYUP && pGlobalTimerWindow != NULL && appSettings.startKey != NULL)
