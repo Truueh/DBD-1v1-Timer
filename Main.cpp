@@ -8,7 +8,13 @@
 #include <commctrl.h>
 #include <ShellScalingApi.h>
 #include "helperFunctions.h"
+#include <Xinput.h>
+#include <dinput.h>
 
+#pragma comment (lib, "xinput.lib")
+#pragma comment(lib, "dinput8.lib")
+#pragma comment(lib, "dxguid.lib")
+#pragma comment(lib, "Msimg32.lib")
 #pragma comment (lib, "d2d1")
 
 using std::thread; using std::wstring;
@@ -34,6 +40,7 @@ enum MousePos
 	none
 };
 
+// static variable assignment
 settingsStruct appSettings;
 
 HWND hwndMainWindow = nullptr;
@@ -42,6 +49,19 @@ HBRUSH hBrushes[25];
 
 class MainWindow;
 
+// static methods
+
+// load a bitmap resource 
+HBITMAP LoadBitmapResource(int bitmap) {
+	HBITMAP hBitmap = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(bitmap));
+	if (!hBitmap) {
+		MessageBox(NULL, L"Failed to load bitmap!", L"Error", MB_OK);
+	}
+
+	return hBitmap;
+}
+
+// Initialize a list of brusehs for each selectable color
 void InitializeBrushes()
 {
 	COLORREF colors[25] = {
@@ -49,7 +69,7 @@ void InitializeBrushes()
 		RGB(1, 55, 125), RGB(0, 157, 209), RGB(151, 231, 245), RGB(115, 211, 72), RGB(38, 177, 112),
 		RGB(49, 0, 74), RGB(51, 0, 123), RGB(76, 0, 164), RGB(131, 0, 196), RGB(171, 0, 255),
 		RGB(255, 0, 255), RGB(192, 64, 255), RGB(128, 128, 255), RGB(64, 182, 255), RGB(0, 255, 255),
-		RGB(0, 0, 0), RGB(85, 170, 0), RGB(159, 193, 49), RGB(182, 176, 169), RGB(237, 231, 224)
+		RGB(1, 1, 1), RGB(35, 35, 35), RGB(85, 85, 85), RGB(182, 176, 169), RGB(237, 231, 224)
 	};
 
 	for (size_t i = 0; i < 25; i++)
@@ -58,6 +78,7 @@ void InitializeBrushes()
 	}
 }
 
+// A procedure for windows of type "control", used to assign a font
 BOOL CALLBACK ControlProc(HWND hControl, LPARAM lParam)
 {
 	HFONT hFont = (HFONT)lParam;
@@ -66,6 +87,7 @@ BOOL CALLBACK ControlProc(HWND hControl, LPARAM lParam)
 	return true;
 }
 
+// Set a specific control's font (title style)
 void SetTitleFont(HWND hControl)
 {
 	HFONT hFont = CreateFont(
@@ -77,6 +99,7 @@ void SetTitleFont(HWND hControl)
 	SendMessage(hControl, WM_SETFONT, (WPARAM)hFont, TRUE);
 }
 
+// Apply the default font to a specific window's child controls
 void SetControlsFont(HWND hWnd)
 {
 	HFONT hFont = CreateFont(
@@ -89,8 +112,8 @@ void SetControlsFont(HWND hWnd)
 }
 
 void ApplySettings(settingsStruct settings) {
-	setSettingsStruct(settings);
-	appSettings = settings;
+	setSettingsStruct(settings); // write to json file (settings.json)
+	appSettings = settings; // save static settings variable
 
 	if (hwndMainWindow != NULL) {
 		// transparency
@@ -115,7 +138,7 @@ void ApplySettings(settingsStruct settings) {
 	}
 }
 
-// A timer struct with all the neccessary functionalities of the timer
+// A timer class with all the neccessary functionalities of the timer
 class Timer
 {
 private:
@@ -124,6 +147,7 @@ private:
 	SYSTEMTIME startTime;
 	SYSTEMTIME updatingTime;
 	
+	// Get milliseconds difference between system times
 	int SubtractTimes(SYSTEMTIME t1, SYSTEMTIME t2)
 	{
 		int seconds = 0;
@@ -148,6 +172,7 @@ public:
 		timerState = TimerState::zero;
 	}
 
+	// Getters and public methods
 	TimerState GetTimerState()
 	{
 		return timerState;
@@ -277,17 +302,19 @@ public:
 template <class DERIVED_CLASS> class BaseWindow
 {
 public:
+	// public variables / methods
 	BaseWindow() : m_hwnd(NULL) { };
 
 	HWND Window() const { return m_hwnd; }
 
-	bool appRunning = false;
+	bool appRunning = false; // saves if the main window is running and signal to break the program loop if it's not (exit app)
 
+	// The actual window procedure every message is sent to. responsible for linking windows to class instances and forward messages to their handlers.
 	static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		DERIVED_CLASS* pThis = NULL;
 
-		if (uMsg == WM_NCCREATE)
+		if (uMsg == WM_NCCREATE) // if a window has just been created, link it to this class instance
 		{
 			CREATESTRUCT* cStruct = (CREATESTRUCT*)lParam;
 			pThis = (DERIVED_CLASS*)cStruct->lpCreateParams;
@@ -295,11 +322,11 @@ public:
 
 			pThis->m_hwnd = hwnd;
 		}
-		else
+		else // if it's just another message to an existing window, save it's class instance to this local variable
 		{
 			pThis = (DERIVED_CLASS*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 		}
-		if (pThis != NULL)
+		if (pThis != NULL) // if the class instance exsists (it should) forward the message to the relevant handler method
 		{
 			return pThis->HandleMessage(uMsg, wParam, lParam);
 		}
@@ -307,6 +334,7 @@ public:
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
 	}
 
+	// Create an HWND (with the windowproc of basewindow that will link this class instance to the HWND)
 	BOOL Create(
 		LPCWSTR lpWindowName,
 		int x = CW_USEDEFAULT,
@@ -342,6 +370,7 @@ protected:
 	HWND m_hwnd;
 	int winSize[2] = { 0, 0 };
 
+	// protected methods to be rewritten by derived classes
 	virtual LPCWSTR ClassName() const { return 0; }
 	virtual LRESULT HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam) = 0;
 };
@@ -356,14 +385,18 @@ template <class T> void SafeRelease(T** ppT)
 	}
 }
 
+// Class for the color picker window
 class ColorPickerWindow : public BaseWindow<ColorPickerWindow>
 {
 private:
+	// Variables
 	HWND hColorButtons[25];
 	HBRUSH hPreviewColor;
 	HWND hPreviewColorButton;
 	int previewColorIndex;
 
+	// Methods
+	// Create and store the squared controls that represent selectable colors
 	void InitializeColorButtons()
 	{
 		int i = 0;
@@ -405,10 +438,10 @@ private:
 		}
 	}
 
+	// Method to be called when the window is created
 	void InitializeWindow()
 	{
 		InitializeColorButtons();
-		InitializeBrushes();
 
 		// Initialize exit controls
 		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, SIZE_COLORPICKER_WIDTH - 150, SIZE_COLORPICKER_HEIGHT - 70, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL);
@@ -417,6 +450,7 @@ private:
 		SetControlsFont(m_hwnd);
 	}
 
+	// Apply changes to the temporary struct the settings window is using
 	void UpdateSettings()
 	{
 		switch (controlID)
@@ -438,11 +472,12 @@ private:
 		RedrawWindow(GetWindow(m_hwnd, GW_OWNER), NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
 	}
 
+	// Called when a control window is clicked
 	void HandleControlCommand(LPARAM lParam)
 	{
+		// retrieve clicked control information
 		HWND hwndCtrl = reinterpret_cast<HWND>(lParam); // clicked item handle
 		int CID = GetDlgCtrlID(hwndCtrl); // retrieve control ID
-		WORD virtualKey = (WORD)SendMessage(hwndCtrl, HKM_GETHOTKEY, 0, 0); // Retrieve HOTKEY pressed
 
 		// clicked a color
 		if (CID >= 0 && CID < 25)
@@ -467,9 +502,11 @@ private:
 	}
 
 	public:
-	int controlID;
-	settingsStruct* pTempSettings;
+	// public variables
+	int controlID; // ID of the control that summoned the color picker window
+	settingsStruct* pTempSettings; // Reference to the settings window's settings struct
 
+	// protected methods rewrite (from BaseClass)
 	LRESULT HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 	{
 		switch (wMsg)
@@ -511,67 +548,112 @@ class SettingsWindow : public BaseWindow<SettingsWindow>
 {
 private:
 	settingsStruct tempSettings;
+	HBITMAP mouseBitmap;
+	HBITMAP controllerBitmap;
 
+	// Window setup
 	void InitializeWindow()
 	{
 		// retrieve settings
 		tempSettings = getSafeSettingsStruct();
 
+		// Set up text
+		InitializeTextControls();
+
+		// Set up buttons and hotkeys
+		InitializeButtonControls();
+
+		// Set up bitmaps
+		InitializeBitmaps();
+	}
+
+	// Initialize bitmaps
+	void InitializeBitmaps()
+	{
+		mouseBitmap = LoadBitmapResource(IDB_MOUSE);
+		controllerBitmap = LoadBitmapResource(IDB_CONTROLLER);
+	}
+
+	// Display bitmaps
+	void DisplayBitmaps()
+	{
+		// preset values
+		int mouseX = SIZE_SETTINGS_WIDTH / 2 + 50; int mouseY = 35;
+		int controllerX = mouseX + 70; int controllerY = 35;
+		int bitmapSize = 25;
+		int originalBitmapSize = 400;
+		COLORREF ignoreColor = RGB(100, 100, 100);
+
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(m_hwnd, &ps);
+
+		// Create a compatible device context
+		HDC hMemDC = CreateCompatibleDC(hdc);
+
+		// Select the mouse bitmap into the memory DC
+		HGDIOBJ oldBitmap = SelectObject(hMemDC, mouseBitmap);
+
+		// Scale bitmaps
+		TransparentBlt(hdc,
+			mouseX, mouseY,			         // Target x, y coordinates
+			bitmapSize,				         // Target width
+			bitmapSize,						 // Target height
+			hMemDC,
+			0, 0,			                 // Source x, y coordinates
+			originalBitmapSize,				 // Source width
+			originalBitmapSize,				 // Source height
+			ignoreColor);
+
+		// Select the controller bitmap into the memory DC
+		oldBitmap = SelectObject(hMemDC, controllerBitmap);
+
+		// Scale bitmaps
+		TransparentBlt(hdc,
+			controllerX, controllerY,			         // Target x, y coordinates
+			bitmapSize,				         // Target width
+			bitmapSize,						 // Target height
+			hMemDC,
+			0, 0,			                 // Source x, y coordinates
+			originalBitmapSize,				 // Source width
+			originalBitmapSize,				 // Source height
+			ignoreColor);
+
+		// Cleanup
+		SelectObject(hMemDC, oldBitmap);
+		DeleteDC(hMemDC);
+
+		EndPaint(m_hwnd, &ps);
+	}
+
+	// Initialize headers
+	void InitializeTextControls()
+	{
 		// preset values
 		int xTitle = 15;
 		int yOffset = 35;
 
-		int xHotkey = SIZE_SETTINGS_WIDTH / 2 + 120;
-		int widthHotkey = 25;
-		int heightHotkey = 25;
-		int sizeCheckbox = 40; // mostly irrelevant since there is no text
-
-		// Copyright
-		HWND hwndCopyright = CreateWindowEx(0, WC_STATIC, L"© Truueh 2024", WS_VISIBLE | WS_CHILDWINDOW, 10, SIZE_SETTINGS_HEIGHT - 65, 100, 40, m_hwnd, 0, NULL, NULL);
-
 		// Initialize headers
-		HWND hwndTitleHotkeys = CreateWindowEx(0, WC_STATIC, L"Hotkeys", WS_VISIBLE | WS_CHILDWINDOW, SIZE_SETTINGS_WIDTH / 2 - 40, 5, 60, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTitleColors = CreateWindowEx(0, WC_STATIC, L"Colors", WS_VISIBLE | WS_CHILDWINDOW, SIZE_SETTINGS_WIDTH / 2 - 40, yOffset * 7, 60, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTitleHotkeys = CreateControl(WC_STATIC, L"Hotkeys", SIZE_SETTINGS_WIDTH / 2 - 40, 5, 60, 40);
+		HWND hwndTitleColors = CreateControl(WC_STATIC, L"Colors", SIZE_SETTINGS_WIDTH / 2 - 40, yOffset * 8, 60, 40);
 
 		// Hotkey titles
-		HWND hwndTextStart = CreateWindowEx(0, WC_STATIC, L"Start / Stop / Reset", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 1, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextTimer1 = CreateWindowEx(0, WC_STATIC, L"Timer 1", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 2, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextTimer2 = CreateWindowEx(0, WC_STATIC, L"Timer 2", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 3, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextTransparentBackground = CreateWindowEx(0, WC_STATIC, L"Transparent Background", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 4, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextCheckboxClickthrough = CreateWindowEx(0, WC_STATIC, L"Clickthrough (resets when app is closed)", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 5, 150, 40, m_hwnd, 0, NULL, NULL);
-
-		// Hotkey buttons
-		HWND hwndHotkeyStart = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 1, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_START, NULL, NULL);
-		HWND hwndHotkeyTimer1 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 2, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER1, NULL, NULL);
-		HWND hwndHotkeyTimer2 = CreateWindowEx(0, HOTKEY_CLASS, L"", WS_VISIBLE | WS_CHILDWINDOW, xHotkey, yOffset * 3, widthHotkey, heightHotkey, m_hwnd, (HMENU)CID_TIMER2, NULL, NULL);
-		HWND hwndCheckboxTransparentBackground = CreateWindowEx(0, WC_BUTTON, L"",BS_CHECKBOX | WS_VISIBLE | WS_CHILDWINDOW | BS_AUTOCHECKBOX, xHotkey, yOffset * 4 - 10, sizeCheckbox, sizeCheckbox, m_hwnd, (HMENU)CID_TRANSPARENT_CB, NULL, NULL);
-		HWND hwndCheckboxClickthrough = CreateWindowEx(0, WC_BUTTON, L"", BS_CHECKBOX | WS_VISIBLE | WS_CHILDWINDOW | BS_AUTOCHECKBOX, xHotkey, yOffset * 5 - 10, sizeCheckbox, sizeCheckbox, m_hwnd, (HMENU)CID_CLICKTHROUGH, NULL, NULL);
+		HWND hwndTextStart = CreateControl(WC_STATIC, L"Start / Stop / Reset", xTitle, yOffset * 2, 150, 40);
+		HWND hwndTextTimer1 = CreateControl(WC_STATIC, L"Timer 1", xTitle, yOffset * 3, 150, 40);
+		HWND hwndTextTimer2 = CreateControl(WC_STATIC, L"Timer 2", xTitle, yOffset * 4, 150, 40);
+		HWND hwndTextTransparentBackground = CreateControl(WC_STATIC, L"Transparent Background", xTitle, yOffset * 5, 150, 40);
+		HWND hwndTextCheckboxClickthrough = CreateControl(WC_STATIC, L"Clickthrough (resets when app is closed)", xTitle, yOffset * 6, 150, 40);
 
 		// Break line
-		HWND hwndBreakLine = CreateWindowEx(0, WC_STATIC, NULL, WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ, 15, yOffset * 7 - 20, 300, 5, m_hwnd, NULL, NULL, NULL);
+		HWND hwndBreakLine = CreateControl(WC_STATIC, NULL, 15, yOffset * 8 - 20, 300, 5, NULL, SS_ETCHEDHORZ);
 
 		// Color options names
-		HWND hwndTextColorTimer = CreateWindowEx(0, WC_STATIC, L"Timer", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 8, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextColorSelectedTimer = CreateWindowEx(0, WC_STATIC, L"Selected Timer", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 9, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextColorWinCon = CreateWindowEx(0, WC_STATIC, L"Last 20 Seconds", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 10, 150, 40, m_hwnd, 0, NULL, NULL);
-		HWND hwndTextColorBackground = CreateWindowEx(0, WC_STATIC, L"Background", WS_VISIBLE | WS_CHILDWINDOW, xTitle, yOffset * 11, 150, 40, m_hwnd, 0, NULL, NULL);
+		HWND hwndTextColorTimer = CreateControl(WC_STATIC, L"Timer", xTitle, yOffset * 9, 150, 40);
+		HWND hwndTextColorSelectedTimer = CreateControl(WC_STATIC, L"Selected Timer", xTitle, yOffset * 10, 150, 40);
+		HWND hwndTextColorWinCon = CreateControl(WC_STATIC, L"Last 20 Seconds", xTitle, yOffset * 11, 150, 40);
+		HWND hwndTextColorBackground = CreateControl(WC_STATIC, L"Background", xTitle, yOffset * 12, 150, 40);
 
-		// Color buttons
-		HWND hwndButtonColorTimer = CreateWindowEx(0, WC_BUTTON, L"", WS_VISIBLE | WS_CHILD | BS_OWNERDRAW, xHotkey - 80, yOffset * 8, 90, 15, m_hwnd, (HMENU)COLOR_CTR_TIMER, NULL, NULL);
-		HWND hwndButtonColorSelectedTimer = CreateWindowEx(0, WC_BUTTON, L"", WS_VISIBLE | WS_CHILD | BS_OWNERDRAW, xHotkey - 80, yOffset * 9, 90, 15, m_hwnd, (HMENU)COLOR_CTR_SELECTED_TIMER, NULL, NULL);
-		HWND hwndButtonColorLastSeconds = CreateWindowEx(0, WC_BUTTON, L"", WS_VISIBLE | WS_CHILD | BS_OWNERDRAW, xHotkey - 80, yOffset * 10, 90, 15, m_hwnd, (HMENU)COLOR_CTR_LAST_SECONDS, NULL, NULL);
-		HWND hwndButtonColorBackground = CreateWindowEx(0, WC_BUTTON, L"", WS_VISIBLE | WS_CHILD | BS_OWNERDRAW, xHotkey - 80, yOffset * 11, 90, 15, m_hwnd, (HMENU)COLOR_CTR_BACKGROUND, NULL, NULL);
-
-		// Initialize exit controls
-		HWND hwndOKButton = CreateWindowEx(0, WC_BUTTON, L"OK", WS_VISIBLE | WS_CHILDWINDOW, SIZE_SETTINGS_WIDTH - 160, SIZE_SETTINGS_HEIGHT - 80, 50, 25, m_hwnd, (HMENU)CID_OK, NULL, NULL);
-		HWND hwndCancelButton = CreateWindowEx(0, WC_BUTTON, L"CANCEL", WS_VISIBLE | WS_CHILDWINDOW, SIZE_SETTINGS_WIDTH - 100, SIZE_SETTINGS_HEIGHT - 80, 70, 25, m_hwnd, (HMENU)CID_CANCEL, NULL, NULL);
-
-		// Apply current settings
-		SendMessage(hwndHotkeyStart, HKM_SETHOTKEY, appSettings.startKey, 0);
-		SendMessage(hwndHotkeyTimer1, HKM_SETHOTKEY, appSettings.timer1Key, 0);
-		SendMessage(hwndHotkeyTimer2, HKM_SETHOTKEY, appSettings.timer2Key, 0);
-		SendMessage(hwndCheckboxTransparentBackground, BM_SETCHECK, appSettings.optionTransparent, 0);
-		SendMessage(hwndCheckboxClickthrough, BM_SETCHECK, appSettings.clickthrough, 0);
+		// Copyright text
+		HWND hwndCopyright = CreateControl(WC_STATIC, L"© Truueh 2024", 10, SIZE_SETTINGS_HEIGHT - 65, 100, 40);
 
 		// Apply fonts
 		SetControlsFont(m_hwnd);
@@ -580,6 +662,54 @@ private:
 		SetCopyrightFont(hwndCopyright);
 	}
 
+	void InitializeButtonControls()
+	{
+		// preset values
+		int yOffset = 35;
+
+		int xHotkey = SIZE_SETTINGS_WIDTH / 2 + 50;
+		int xHotkeyCon = xHotkey + 70;
+		int xColorButton = xHotkeyCon - 80;
+		int widthHotkey = 25;
+		int heightHotkey = 25;
+		int sizeCheckbox = 40;
+
+		// Hotkey buttons - Mouse
+		HWND hHotkeyStart = CreateControl(HOTKEY_CLASS, L"", xHotkey, yOffset * 2, widthHotkey, heightHotkey, CID_START);
+		HWND hHotkeyTimer1 = CreateControl(HOTKEY_CLASS, L"", xHotkey, yOffset * 3, widthHotkey, heightHotkey, CID_TIMER1);
+		HWND hHotkeyTimer2 = CreateControl(HOTKEY_CLASS, L"", xHotkey, yOffset * 4, widthHotkey, heightHotkey, CID_TIMER2);
+		HWND hCbTransparentBg = CreateControl(WC_BUTTON, L"", xHotkeyCon, yOffset * 5 - 10, sizeCheckbox, sizeCheckbox, CID_TRANSPARENT_CB, BS_CHECKBOX | BS_AUTOCHECKBOX);
+		HWND hCbClickthrough = CreateControl(WC_BUTTON, L"", xHotkeyCon, yOffset * 6 - 10, sizeCheckbox, sizeCheckbox, CID_CLICKTHROUGH, BS_CHECKBOX | BS_AUTOCHECKBOX);
+
+		// Hotkey buttons - Controller
+		HWND hHotkeyStartCon = CreateControl(HOTKEY_CLASS, L"", xHotkeyCon, yOffset * 2, widthHotkey, heightHotkey, -1);
+		HWND hHotkeyTimer1Con = CreateControl(HOTKEY_CLASS, L"", xHotkeyCon, yOffset * 3, widthHotkey, heightHotkey, -1);
+		HWND hHotkeyTimer2Con = CreateControl(HOTKEY_CLASS, L"", xHotkeyCon, yOffset * 4, widthHotkey, heightHotkey, -1);
+		
+		// Color buttons
+		HWND hwndButtonColorTimer = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 9, 90, 15, COLOR_CTR_TIMER, BS_OWNERDRAW);
+		HWND hwndButtonColorSelectedTimer = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 10, 90, 15, COLOR_CTR_SELECTED_TIMER, BS_OWNERDRAW);
+		HWND hwndButtonColorLastSeconds = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 11, 90, 15, COLOR_CTR_LAST_SECONDS, BS_OWNERDRAW);
+		HWND hwndButtonColorBackground = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 12, 90, 15, COLOR_CTR_BACKGROUND, BS_OWNERDRAW);
+
+		// Initialize exit controls
+		HWND hwndOKButton = CreateControl(WC_BUTTON, L"OK", SIZE_SETTINGS_WIDTH - 160, SIZE_SETTINGS_HEIGHT - 80, 50, 25, CID_OK);
+		HWND hwndCancelButton = CreateControl(WC_BUTTON, L"CANCEL", SIZE_SETTINGS_WIDTH - 100, SIZE_SETTINGS_HEIGHT - 80, 70, 25, CID_CANCEL);
+
+		// Apply current settings
+		SendMessage(hHotkeyStart, HKM_SETHOTKEY, appSettings.startKey, 0);
+		SendMessage(hHotkeyTimer1, HKM_SETHOTKEY, appSettings.timer1Key, 0);
+		SendMessage(hHotkeyTimer2, HKM_SETHOTKEY, appSettings.timer2Key, 0);
+		SendMessage(hCbTransparentBg, BM_SETCHECK, appSettings.optionTransparent, 0);
+		SendMessage(hCbClickthrough, BM_SETCHECK, appSettings.clickthrough, 0);
+	}
+
+	// Function for creating a control
+	HWND CreateControl(LPCWSTR className, LPCWSTR controlName, int x, int y, int width, int height, int id=NULL, long ADDITIONAL_STYLE=0) {
+		return CreateWindowEx(0, className, controlName, WS_VISIBLE | WS_CHILDWINDOW | ADDITIONAL_STYLE, x, y, width, height, m_hwnd, (HMENU)id, NULL, NULL);
+	}
+
+	// Apply the font for the copyright style to a specific control
 	void SetCopyrightFont(HWND hControl)
 	{
 		HFONT hFont = CreateFont(
@@ -591,6 +721,7 @@ private:
 		SendMessage(hControl, WM_SETFONT, (WPARAM)hFont, TRUE);
 	}
 
+	// Method to handle controls clicked
 	void HandleControlCommand(LPARAM lParam)
 	{
 		HWND hwndCtrl = reinterpret_cast<HWND>(lParam); // clicked item handle
@@ -619,18 +750,18 @@ private:
 		case CID_TRANSPARENT_CB: // Transparent background checkbox
 			tempSettings.optionTransparent = (Button_GetCheck(hwndCtrl) == BST_CHECKED);
 			break;
-		case CID_CLICKTHROUGH:
+		case CID_CLICKTHROUGH: // Clickthrough checkbox
 			tempSettings.clickthrough = (Button_GetCheck(hwndCtrl) == BST_CHECKED);
 			break;
-		case COLOR_CTR_TIMER:
+		case COLOR_CTR_TIMER: // Any color control clicked
 		case COLOR_CTR_SELECTED_TIMER:
 		case COLOR_CTR_LAST_SECONDS:
 		case COLOR_CTR_BACKGROUND:
 		{
-			// open a Color Picker window
+			// Open a Color Picker window
 			if (pColorPicker->Window() == NULL)
 			{
-				pColorPicker->controlID = controlID;
+				pColorPicker->controlID = controlID; // Notify Color Picker who called it
 				pColorPicker->pTempSettings = &tempSettings;
 
 				if (!pColorPicker->Create(L"Color Picker", 850, 300, SIZE_COLORPICKER_WIDTH, SIZE_COLORPICKER_HEIGHT, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, NULL)) {
@@ -648,17 +779,18 @@ private:
 	}
 
 public:
-	ColorPickerWindow* pColorPicker;
+	ColorPickerWindow* pColorPicker; // Reference to a Color Picker window
 
 	void ColorHandles(LPARAM lParam)
 	{
 		LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
-		// in case of invalid color index (to prevent index out of range)
+		// In case of invalid color index (to prevent index out of range)
 		if (tempSettings.colors.timerColor > 24) {
 			FillRect(pDIS->hDC, &pDIS->rcItem, hBrushes[0]);
 			return;
 		}
 
+		// Apply saved color to the color controls in the setting's window
 		switch (pDIS->CtlID)
 		{
 		case COLOR_CTR_TIMER:
@@ -676,6 +808,7 @@ public:
 		}
 	}
 
+	// Overwrite of the message handler inherited from BaseWindow
 	LRESULT HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 	{
 		switch (wMsg)
@@ -691,11 +824,14 @@ public:
 		case WM_COMMAND: // Control item clicked
 			HandleControlCommand(lParam);
 			return 0;
-		case WM_DRAWITEM:
+		case WM_DRAWITEM: // Color controls
 		{
 			ColorHandles(lParam);
 			return TRUE;
 		}
+		case WM_PAINT:
+			DisplayBitmaps();
+			break;
 		}
 		return DefWindowProc(Window(), wMsg, wParam, lParam);
 	}
@@ -1346,6 +1482,18 @@ public:
 	}
 };
 
+void controllerTest()
+{
+	XINPUT_STATE state = {};
+	DWORD result = XInputGetState(0, &state);
+
+	if (result == ERROR_SUCCESS) {
+		if (state.Gamepad.wButtons & XINPUT_GAMEPAD_X) {
+			bool test = true;
+		}
+	}
+}
+
 // Global reference to the main window class instance (for the hook proc)
 MainWindow* pGlobalTimerWindow = NULL;
 
@@ -1358,6 +1506,8 @@ void AppLoop(MainWindow* win)
 		win->timer1.UpdateTime();
 		win->timer2.UpdateTime();
 		win->Draw();
+
+		controllerTest();
 	}
 }
 
@@ -1424,22 +1574,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	// Apply saved settings
 	ApplySettings(appSettings);
-
-
-
-
-	// ***** TESTING START ****** //
-	/*
-	ColorPickerWindow tmpWindow;
-	tmpWindow.Create(L"Color Picker", 400, 500, SIZE_COLORPICKER_WIDTH, SIZE_COLORPICKER_HEIGHT, 0, 0);
-	ShowWindow(tmpWindow.Window(), nCmdShow);
-	*/
-
-
-	// ****** TESTING END ****** //
-
-
-
 
 	// Listen for keys: F1, F2, F While running in the background - Install a hook procedure
 	HHOOK kbd = SetWindowsHookEx(WH_KEYBOARD_LL, &KBHook, 0, 0);

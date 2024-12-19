@@ -2,7 +2,7 @@
    "colors" : 
    {
       "background" : 20,
-      "last seconds" : 1,
+      "last seconds" : 0,
       "selected timer" : 6,
       "timer" : 8
    },

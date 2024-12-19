@@ -153,6 +153,10 @@
     <ResourceCompile Include="DBD 1v1 Timer1.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\concept\ControllerIcon.bmp" />
+    <Image Include="..\concept\ControllerIconLowRes.bmp" />
+    <Image Include="..\concept\MouseIcon.bmp" />
+    <Image Include="..\concept\MouseIconLowRes.bmp" />
     <Image Include="icon\appIcon.ico" />
   </ItemGroup>
   <ItemGroup>

@@ -23,9 +23,13 @@
 
 // Global Sizes
 #define SIZE_SETTINGS_WIDTH		350
-#define SIZE_SETTINGS_HEIGHT	520
+#define SIZE_SETTINGS_HEIGHT	560
 #define SIZE_COLORPICKER_WIDTH	270
 #define SIZE_COLORPICKER_HEIGHT	350
+
+// Bitmaps
+#define IDB_MOUSE				110
+#define IDB_CONTROLLER			111
 
 // Custom HWND messages
 #define REFRESH_BRUSHES			(WM_APP + 1)
