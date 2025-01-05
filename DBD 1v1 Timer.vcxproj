@@ -132,12 +132,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ColorPickerWindow.cpp" />
     <ClCompile Include="dist\jsoncpp.cpp" />
     <ClCompile Include="HelperFunctions.cpp" />
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="Program.cpp" />
+    <ClCompile Include="SettingsWindow.cpp" />
+    <ClCompile Include="Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="helperFunctions.h" />
+    <ClInclude Include="BaseWindow.h" />
+    <ClInclude Include="ColorPickerWindow.h" />
+    <ClInclude Include="enums.h" />
+    <ClInclude Include="globals.h" />
+    <ClInclude Include="HelperFunctions.h" />
+    <ClInclude Include="MainWindow.h" />
+    <ClInclude Include="Program.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resource1.h" />
     <ClInclude Include="resource2.h" />
@@ -148,6 +158,8 @@
     <ClInclude Include="resource7.h" />
     <ClInclude Include="resource8.h" />
     <ClInclude Include="resource9.h" />
+    <ClInclude Include="SettingsWindow.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DBD 1v1 Timer1.rc" />

@@ -1,62 +1,85 @@
-// HWND Control IDs
-#define CID_OK					100
-#define CID_CANCEL				101
-#define CID_START				103
-#define CID_TIMER1				104
-#define CID_TIMER2				105
-#define CID_TRANSPARENT_CB		106
-#define CID_CLICKTHROUGH		107
-#define MENU_QUIT				1
-#define MENU_SETTINGS			0
-#define KEY_START				0
-#define KEY_TIMER1				1
-#define KEY_TIMER2				2
-#define OPTION_TRANSPARENT		3
-#define OPTION_CLICKTHROUGH		4
+#pragma once
+#include "globals.h"
 
-// HWND Color Control IDs
-#define COLOR_CTR_TIMER				108
-#define COLOR_CTR_SELECTED_TIMER	109
-#define COLOR_CTR_LAST_SECONDS		110
-#define COLOR_CTR_BACKGROUND		111
-#define COLOR_PREVIEW				25
-
-// Global Sizes
-#define SIZE_SETTINGS_WIDTH		350
-#define SIZE_SETTINGS_HEIGHT	560
-#define SIZE_COLORPICKER_WIDTH	270
-#define SIZE_COLORPICKER_HEIGHT	350
-
-// Bitmaps
-#define IDB_MOUSE				110
-#define IDB_CONTROLLER			111
-
-// Custom HWND messages
-#define REFRESH_BRUSHES			(WM_APP + 1)
-
-struct colorsStruct
+// Release pointers safely
+template <class T> void SafeRelease(T** ppT)
 {
-	int timerColor;
-	int selectedTimerColor;
-	int lastSecondsColor;
-	int backgroundColor;
-};
+	if (*ppT)
+	{
+		(*ppT)->Release();
+		*ppT = NULL;
+	}
+}
 
-struct settingsStruct
-{
-	int startKey;
-	int timer1Key;
-	int timer2Key;
-	bool optionTransparent;
-	bool clickthrough;
-	colorsStruct colors;
-};
+// Methods
 
-// HelperFunctions.cpp functions
+/*
+@brief Safely retrieves the settingsStruct from the settings.json file.
+		Handles errors in the settings.json file and resets it if need be.
+
+@return The settingsStruct representing the saved settings from the settings.json file.
+*/
 settingsStruct getSafeSettingsStruct();
 
+/*
+@brief Writes the settings from the given settingsStruct to the settings.json file.
+
+@param settings The settings struct to save to the file.
+*/
 void setSettingsStruct(settingsStruct settings);
 
+/*
+@brief Initial creation of the settings.json file.
+*/
 void createSettingsFile();
 
+/*
+@return Wether settings.json exists or not.
+*/
 bool settingsFileExists();
+
+/*
+@brief Set a specific control's font (title style).
+
+@param hControl The control to change the font of.
+*/
+void SetTitleFont(HWND hControl);
+
+/*
+@brief Apply the default font to a specific window's child controls.
+
+@param hWnd The handle to the window who's child controls will be affected.
+*/
+void SetControlsFont(HWND hWnd);
+
+/*
+@brief Save settings to local variable and json file (also apply temporary settings).
+
+@param settings The settings to be applied.
+*/
+void ApplySettings(settingsStruct settings);
+
+/*
+@brief Load a bitmap resource.
+
+@param bitmap The bitmap resource to load.
+
+@return A handle to the bitmap loaded.
+*/
+HBITMAP LoadBitmapResource(int bitmap);
+
+/*
+@brief Initialize the colors that can be chosen (as brushes).
+*/
+void InitializeBrushes();
+
+/*
+@brief A procedure for windows of type "control", used to assign a font.
+
+@param hControl The HWND control to assign the font to.
+
+@param lParam An LPARAM containing the font to set for the hControl.
+
+@return BOOL
+*/
+BOOL CALLBACK ControlProc(HWND hControl, LPARAM lParam);

@@ -1,12 +1,13 @@
+#include "HelperFunctions.h"
 #include <json/json.h>
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "helperFunctions.h"
+#include <Windows.h>
 
 using namespace std;
 
-// Retrieve settings information from json file
+// Methods
 settingsStruct getSafeSettingsStruct()
 {
 	ifstream file("settings.json");
@@ -70,7 +71,6 @@ settingsStruct getSafeSettingsStruct()
 	return settings;
 }
 
-// Set given information in json file
 void setSettingsStruct(settingsStruct settings)
 {
 	ifstream file("settings.json");
@@ -100,7 +100,6 @@ void setSettingsStruct(settingsStruct settings)
 	writer->write(settingsJson, &outputFileStream);
 }
 
-// Initial creation of the settings.json file
 void createSettingsFile()
 {
 	ofstream file("settings.json");
@@ -112,10 +111,91 @@ void createSettingsFile()
 	file.close();
 }
 
-// Return wether settings.json exists or not
 bool settingsFileExists() {
 	string name = "settings.json";
 
 	ifstream f(name.c_str());
 	return f.good();
+}
+
+BOOL CALLBACK ControlProc(HWND hControl, LPARAM lParam)
+{
+	HFONT hFont = (HFONT)lParam;
+	SendMessage(hControl, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+	return true;
+}
+
+void SetTitleFont(HWND hControl)
+{
+	HFONT hFont = CreateFont(
+		16, 0, 0, 0, FW_BLACK, FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"
+	);
+
+	SendMessage(hControl, WM_SETFONT, (WPARAM)hFont, TRUE);
+}
+
+void SetControlsFont(HWND hWnd)
+{
+	HFONT hFont = CreateFont(
+		16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"
+	);
+
+	EnumChildWindows(hWnd, ControlProc, (LPARAM)hFont);
+}
+
+void ApplySettings(settingsStruct settings) {
+	setSettingsStruct(settings); // write to json file (settings.json)
+	appSettings = settings; // save static settings variable
+
+	if (hwndMainWindow != NULL) {
+		// transparency
+		if (appSettings.optionTransparent) { // add transparent effect
+			SetLayeredWindowAttributes(hwndMainWindow, 0, 0, LWA_COLORKEY);
+		}
+		else { // remove transparent effect
+			SetLayeredWindowAttributes(hwndMainWindow, 0, 255, LWA_ALPHA);
+		}
+
+		// clickthrough
+		if (appSettings.clickthrough) { // make clickthrough
+			// Get the current window style
+			LONG style = GetWindowLong(hwndMainWindow, GWL_EXSTYLE);
+
+			// Add the new style to the current styles
+			style |= WS_EX_TRANSPARENT;
+
+			// Set the new style
+			SetWindowLong(hwndMainWindow, GWL_EXSTYLE, style);
+		}
+	}
+}
+
+HBITMAP LoadBitmapResource(int bitmap) {
+	HBITMAP hBitmap = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(bitmap));
+	if (!hBitmap) {
+		MessageBox(NULL, L"Failed to load bitmap!", L"Error", MB_OK);
+	}
+
+	return hBitmap;
+}
+
+void InitializeBrushes()
+{
+	COLORREF colors[25] = {
+		RGB(255, 0, 0), RGB(255, 77, 0), RGB(255, 116, 0), RGB(255, 154, 0), RGB(255, 193, 0),
+		RGB(1, 55, 125), RGB(0, 157, 209), RGB(151, 231, 245), RGB(115, 211, 72), RGB(38, 177, 112),
+		RGB(49, 0, 74), RGB(51, 0, 123), RGB(76, 0, 164), RGB(131, 0, 196), RGB(171, 0, 255),
+		RGB(255, 0, 255), RGB(192, 64, 255), RGB(128, 128, 255), RGB(64, 182, 255), RGB(0, 255, 255),
+		RGB(1, 1, 1), RGB(35, 35, 35), RGB(85, 85, 85), RGB(182, 176, 169), RGB(237, 231, 224)
+	};
+
+	for (size_t i = 0; i < 25; i++)
+	{
+		hBrushes[i] = CreateSolidBrush(colors[i]);
+	}
 }
