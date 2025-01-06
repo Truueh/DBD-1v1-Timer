@@ -3,6 +3,8 @@
 #include "globals.h"
 #include "HelperFunctions.h"
 #include "ColorPickerWindow.h"
+#include "Program.h"
+#include <exception>
 
 // Methods
 // Create and store the squared controls that represent selectable colors
@@ -109,33 +111,40 @@ void ColorPickerWindow::HandleControlCommand(LPARAM lParam)
 
 LRESULT ColorPickerWindow::HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
-	switch (wMsg)
+	try
 	{
-	case WM_CREATE:
-	{
-		InitializeWindow();
-		return 0;
-	}
-	case WM_DESTROY:
-		m_hwnd = NULL;
-		return 0;
-	case WM_COMMAND: // Control item clicked
-		HandleControlCommand(lParam);
-		return 0;
-	case WM_DRAWITEM:
-	{
-		LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
-		if (pDIS->CtlID == COLOR_PREVIEW)
+		switch (wMsg)
 		{
-			FillRect(pDIS->hDC, &pDIS->rcItem, hPreviewColor);
-		}
-		else
+		case WM_CREATE:
 		{
-			FillRect(pDIS->hDC, &pDIS->rcItem, hBrushes[pDIS->CtlID]);
+			InitializeWindow();
+			return 0;
 		}
+		case WM_DESTROY:
+			m_hwnd = NULL;
+			return 0;
+		case WM_COMMAND: // Control item clicked
+			HandleControlCommand(lParam);
+			return 0;
+		case WM_DRAWITEM:
+		{
+			LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
+			if (pDIS->CtlID == COLOR_PREVIEW)
+			{
+				FillRect(pDIS->hDC, &pDIS->rcItem, hPreviewColor);
+			}
+			else
+			{
+				FillRect(pDIS->hDC, &pDIS->rcItem, hBrushes[pDIS->CtlID]);
+			}
 
-		return TRUE;
+			return TRUE;
+		}
+		}
 	}
+	catch (const std::exception e)
+	{
+		KillProgram();
 	}
 	return DefWindowProc(Window(), wMsg, wParam, lParam);
 }

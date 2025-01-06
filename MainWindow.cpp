@@ -469,130 +469,138 @@ void MainWindow::RefreshBrushes()
 
 LRESULT MainWindow::HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
-	RECT windowPos;
-	GetWindowRect(m_hwnd, &windowPos);
+	try
+	{
+		RECT windowPos;
+		GetWindowRect(m_hwnd, &windowPos);
 
-	switch (wMsg)
-	{
-	case WM_CREATE:
-	{
-		if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &pFactory))) {
-			return -1;
-		}
-		else {
-			CreateGraphicsResources();
-			CreateDeviceIndependentResources();
-		}
-		appSettings = getSafeSettingsStruct();
-		appRunning = true;
-		return 0;
-	}
-	case WM_DESTROY:
-	{
-		KillProgram();
-		return 0;
-	}
-	case WM_LBUTTONDOWN:
-	{
-		mouseDown = true;
-		clickMousePos[0] = GET_X_LPARAM(lParam); clickMousePos[1] = GET_Y_LPARAM(lParam);
-		resizing = (GetCursor() != LoadCursor(NULL, IDC_ARROW));
-		MousePos mPos = GetMouseDir(lParam, windowPos);
-
-		// set drag direction according to mouse position
-		if (mPos == MousePos::topRight || mPos == MousePos::topLeft ||
-			mPos == MousePos::bottomLeft || mPos == MousePos::bottomRight)
+		switch (wMsg)
 		{
-			dir = 2;
-		}
-		else if (mPos == MousePos::right || mPos == MousePos::left)
+		case WM_CREATE:
 		{
-			dir = 1;
-		}
-		else if (mPos == MousePos::top || mPos == MousePos::bottom)
-		{
-			dir = 0;
-		}
-		else
-		{
-			dir = -1;
-		}
-
-		SetCapture(m_hwnd);
-		return 0;
-	}
-	case WM_LBUTTONUP:
-	{
-		mouseDown = false;
-		resizing = false;
-		dir = -1;
-		ReleaseCapture();
-
-		// update winSize var after resizing
-		if (windowPos.right - windowPos.left != winSize[0]) {
-			winSize[0] = windowPos.right - windowPos.left;
-			AdjustRendertargetSize();
-			ChangeFontSize(GetLargestFontsizeFit());
-		}
-		if (windowPos.bottom - windowPos.top != winSize[1]) {
-			winSize[1] = windowPos.bottom - windowPos.top;
-			AdjustRendertargetSize();
-			ChangeFontSize(GetLargestFontsizeFit());
-		}
-		return 0;
-	}
-	case WM_MOUSEMOVE:
-	{
-		HandleMousemovement(lParam);
-		return 0;
-	}
-	case WM_COMMAND:
-	{
-		switch (wParam)
-		{
-		case MENU_SETTINGS:
-			if (pSettingsWindow->Window() == NULL) // dont create multiple settings windows
-			{
-				// Create and show settings window
-				if (!pSettingsWindow->Create(L"Settings - Version 1.1", 500, 200, SIZE_SETTINGS_WIDTH, SIZE_SETTINGS_HEIGHT, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, 0, NULL)) {
-					return 0;
-				}
-
-				ShowWindow(pSettingsWindow->Window(), SW_SHOW);
+			if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &pFactory))) {
+				return -1;
 			}
-			else
-			{
-				SetForegroundWindow(pSettingsWindow->Window());
+			else {
+				CreateGraphicsResources();
+				CreateDeviceIndependentResources();
 			}
+			appSettings = getSafeSettingsStruct();
+			appRunning = true;
 			return 0;
-		case MENU_QUIT:
+		}
+		case WM_DESTROY:
+		{
 			KillProgram();
 			return 0;
 		}
-		return 0;
-	}
-	case WM_CONTEXTMENU:
-	{
-		// mouse pos
-		int mouseX = GET_X_LPARAM(lParam);
-		int mouseY = GET_Y_LPARAM(lParam);
+		case WM_LBUTTONDOWN:
+		{
+			mouseDown = true;
+			clickMousePos[0] = GET_X_LPARAM(lParam); clickMousePos[1] = GET_Y_LPARAM(lParam);
+			resizing = (GetCursor() != LoadCursor(NULL, IDC_ARROW));
+			MousePos mPos = GetMouseDir(lParam, windowPos);
 
-		// create popup menu
-		HMENU hMenu = CreatePopupMenu();
-		InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, MENU_QUIT, L"Quit");
-		InsertMenu(hMenu, 0, MF_BYPOSITION | MF_SEPARATOR, 100, L"");
-		InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, MENU_SETTINGS, L"Settings");
-		SetForegroundWindow(m_hwnd);
-		TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_TOPALIGN, mouseX, mouseY, 0, m_hwnd, NULL);
-		return 0;
+			// set drag direction according to mouse position
+			if (mPos == MousePos::topRight || mPos == MousePos::topLeft ||
+				mPos == MousePos::bottomLeft || mPos == MousePos::bottomRight)
+			{
+				dir = 2;
+			}
+			else if (mPos == MousePos::right || mPos == MousePos::left)
+			{
+				dir = 1;
+			}
+			else if (mPos == MousePos::top || mPos == MousePos::bottom)
+			{
+				dir = 0;
+			}
+			else
+			{
+				dir = -1;
+			}
+
+			SetCapture(m_hwnd);
+			return 0;
+		}
+		case WM_LBUTTONUP:
+		{
+			mouseDown = false;
+			resizing = false;
+			dir = -1;
+			ReleaseCapture();
+
+			// update winSize var after resizing
+			if (windowPos.right - windowPos.left != winSize[0]) {
+				winSize[0] = windowPos.right - windowPos.left;
+				AdjustRendertargetSize();
+				ChangeFontSize(GetLargestFontsizeFit());
+			}
+			if (windowPos.bottom - windowPos.top != winSize[1]) {
+				winSize[1] = windowPos.bottom - windowPos.top;
+				AdjustRendertargetSize();
+				ChangeFontSize(GetLargestFontsizeFit());
+			}
+			return 0;
+		}
+		case WM_MOUSEMOVE:
+		{
+			HandleMousemovement(lParam);
+			return 0;
+		}
+		case WM_COMMAND:
+		{
+			switch (wParam)
+			{
+			case MENU_SETTINGS:
+				if (pSettingsWindow->Window() == NULL) // dont create multiple settings windows
+				{
+					// Create and show settings window
+					if (!pSettingsWindow->Create(L"Settings - Version 1.1", 500, 200, SIZE_SETTINGS_WIDTH, SIZE_SETTINGS_HEIGHT, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, 0, NULL)) {
+						return 0;
+					}
+
+					ShowWindow(pSettingsWindow->Window(), SW_SHOW);
+				}
+				else
+				{
+					SetForegroundWindow(pSettingsWindow->Window());
+				}
+				return 0;
+			case MENU_QUIT:
+				KillProgram();
+				return 0;
+			}
+			return 0;
+		}
+		case WM_CONTEXTMENU:
+		{
+			// mouse pos
+			int mouseX = GET_X_LPARAM(lParam);
+			int mouseY = GET_Y_LPARAM(lParam);
+
+			// create popup menu
+			HMENU hMenu = CreatePopupMenu();
+			InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, MENU_QUIT, L"Quit");
+			InsertMenu(hMenu, 0, MF_BYPOSITION | MF_SEPARATOR, 100, L"");
+			InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, MENU_SETTINGS, L"Settings");
+			SetForegroundWindow(m_hwnd);
+			TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_TOPALIGN, mouseX, mouseY, 0, m_hwnd, NULL);
+			return 0;
+		}
+		case WM_SETCURSOR:
+			// disable default automatic cursor change (only manually set it)
+			return 0;
+		case REFRESH_BRUSHES:
+			RefreshBrushes();
+			break;
+		}
 	}
-	case WM_SETCURSOR:
-		// disable default automatic cursor change (only manually set it)
-		return 0;
-	case REFRESH_BRUSHES:
-		RefreshBrushes();
-		break;
+	catch (const std::exception e) // End the program in case of exceptions
+	{
+		KillProgram();
 	}
+
 	return DefWindowProc(Window(), wMsg, wParam, lParam);
 }
 

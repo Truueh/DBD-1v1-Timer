@@ -1,8 +1,10 @@
 #include "SettingsWindow.h"
 #include "HelperFunctions.h"
 #include "BaseWindow.h"
+#include "Program.h"
 #include <CommCtrl.h>
 #include <windowsx.h>
+#include <exception>
 
 // Methods
 
@@ -258,27 +260,34 @@ void SettingsWindow::ColorHandles(LPARAM lParam)
 
 LRESULT SettingsWindow::HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
-	switch (wMsg)
+	try
 	{
-	case WM_CREATE:
-	{
-		InitializeWindow();
-		return 0;
+		switch (wMsg)
+		{
+		case WM_CREATE:
+		{
+			InitializeWindow();
+			return 0;
+		}
+		case WM_DESTROY:
+			m_hwnd = NULL;
+			return 0;
+		case WM_COMMAND: // Control item clicked
+			HandleControlCommand(lParam);
+			return 0;
+		case WM_DRAWITEM: // Color controls
+		{
+			ColorHandles(lParam);
+			return TRUE;
+		}
+		case WM_PAINT:
+			DisplayBitmaps();
+			break;
+		}
 	}
-	case WM_DESTROY:
-		m_hwnd = NULL;
-		return 0;
-	case WM_COMMAND: // Control item clicked
-		HandleControlCommand(lParam);
-		return 0;
-	case WM_DRAWITEM: // Color controls
+	catch (const std::exception e)
 	{
-		ColorHandles(lParam);
-		return TRUE;
-	}
-	case WM_PAINT:
-		DisplayBitmaps();
-		break;
+		KillProgram();
 	}
 	return DefWindowProc(Window(), wMsg, wParam, lParam);
 }
