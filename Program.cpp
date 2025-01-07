@@ -61,7 +61,7 @@ LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (hitKey == VK_LCONTROL || hitKey == VK_RCONTROL) {
 			hitKey = VK_CONTROL;
 		}
-
+		
 		// Take action according to hit hotkey
 		if (hitKey == appSettings.startKey)
 		{

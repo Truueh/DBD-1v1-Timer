@@ -19,3 +19,10 @@ enum MousePos
 	left,
 	none
 };
+
+enum ItemPosition
+{
+	Left,
+	Center,
+	Right
+};

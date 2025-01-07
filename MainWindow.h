@@ -28,7 +28,7 @@ private:
 	bool resizing = false;
 	int dir = -1;
 	int spaceOffset = 8;
-
+	
 	// Methods
 
 	/*

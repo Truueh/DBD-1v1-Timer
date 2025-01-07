@@ -61,3 +61,23 @@ extern HINSTANCE hInstanceGlobal;
 extern HBRUSH hBrushes[25];
 extern settingsStruct appSettings;
 extern HWND hwndMainWindow;
+
+class Rect
+{
+public:
+	int X;
+	int Y;
+	int Width;
+	int Height;
+
+	Rect(int x, int y, int width, int height) {
+		X = x;
+		Y = y;
+		Width = width;
+		Height = height;
+	}
+
+	Rect() {
+		X = 0; Y = 0; Width = 0; Height = 0;
+	}
+};
