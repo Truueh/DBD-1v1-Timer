@@ -19,6 +19,8 @@
 
 #pragma comment(lib, "Msimg32.lib")
 #pragma comment (lib, "d2d1")
+#pragma comment(lib, "Dinput8.lib")
+#pragma comment(lib, "dxguid.lib")
 
 using std::thread; using std::wstring;
 
@@ -26,6 +28,7 @@ using std::thread; using std::wstring;
 settingsStruct appSettings;
 HBRUSH hBrushes[25];
 HWND hwndMainWindow = nullptr;
+HINSTANCE hInstanceGlobal;
 MainWindow* pGlobalTimerWindow = NULL; // used for the hook procedure
 
 void AppLoop(MainWindow* win)
@@ -73,9 +76,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 {
 	// Create the main window
 	MainWindow win;
-	
+
 	try
 	{
+		// Global hInstance variable (declared in globals.h)
+		hInstanceGlobal = hInstance;
+
 		// Create settings file on program first run
 		if (!settingsFileExists())
 		{
@@ -114,6 +120,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 		// Create a thread for the app loop (ticks)
 		thread t1(AppLoop, &win);
+
+		// ********* TESTING GAMEPAD CLASS ****************** //
+
+		
+
+		// ********* TESTING GAMEPAD CLASS ****************** //
 
 		// Handle messages
 		MSG msg = { };

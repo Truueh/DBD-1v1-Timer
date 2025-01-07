@@ -32,8 +32,8 @@ void SettingsWindow::InitializeBitmaps()
 void SettingsWindow::DisplayBitmaps()
 {
 	// preset values
-	int mouseX = SIZE_SETTINGS_WIDTH / 2 + 50; int mouseY = 35;
-	int controllerX = mouseX + 70; int controllerY = 35;
+	int mouseX = SIZE_SETTINGS_WIDTH / 2 + 45; int mouseY = 35;
+	int controllerX = mouseX + 75; int controllerY = 35;
 	int bitmapSize = 25;
 	int originalBitmapSize = 400;
 	COLORREF ignoreColor = RGB(100, 100, 100);
@@ -87,23 +87,27 @@ void SettingsWindow::InitializeTextControls()
 
 	// Initialize headers
 	HWND hwndTitleHotkeys = CreateControl(WC_STATIC, L"Hotkeys", SIZE_SETTINGS_WIDTH / 2 - 40, 5, 60, 40);
-	HWND hwndTitleColors = CreateControl(WC_STATIC, L"Colors", SIZE_SETTINGS_WIDTH / 2 - 40, yOffset * 8, 60, 40);
+	HWND hwndTitleOptions = CreateControl(WC_STATIC, L"Options", SIZE_SETTINGS_WIDTH / 2 - 40, yOffset * 6 - 20, 80, 40);
+	HWND hwndTitleColors = CreateControl(WC_STATIC, L"Colors", SIZE_SETTINGS_WIDTH / 2 - 40, yOffset * 10 - 20, 60, 40);
 
 	// Hotkey titles
 	HWND hwndTextStart = CreateControl(WC_STATIC, L"Start / Stop / Reset", xTitle, yOffset * 2, 150, 40);
-	HWND hwndTextTimer1 = CreateControl(WC_STATIC, L"Timer 1", xTitle, yOffset * 3, 150, 40);
-	HWND hwndTextTimer2 = CreateControl(WC_STATIC, L"Timer 2", xTitle, yOffset * 4, 150, 40);
-	HWND hwndTextTransparentBackground = CreateControl(WC_STATIC, L"Transparent Background", xTitle, yOffset * 5, 150, 40);
-	HWND hwndTextCheckboxClickthrough = CreateControl(WC_STATIC, L"Clickthrough (resets when app is closed)", xTitle, yOffset * 6, 150, 40);
+	HWND hwndTextTimer1 = CreateControl(WC_STATIC, L"Timer 1", xTitle, yOffset * 3, 150, 20);
+	HWND hwndTextTimer2 = CreateControl(WC_STATIC, L"Timer 2", xTitle, yOffset * 4, 150, 20);
 
-	// Break line
-	HWND hwndBreakLine = CreateControl(WC_STATIC, NULL, 15, yOffset * 8 - 20, 300, 5, NULL, SS_ETCHEDHORZ);
+	// Checkbox titles
+	HWND hwndTextTransparentBackground = CreateControl(WC_STATIC, L"Transparent Background", xTitle, yOffset * 7 - 20, 150, 20);
+	HWND hwndTextCheckboxClickthrough = CreateControl(WC_STATIC, L"Clickthrough (resets when app is closed)", xTitle, yOffset * 8 - 20, 150, 40);
+
+	// Break lines
+	HWND hwndBreakLine1 = CreateControl(WC_STATIC, NULL, 15, yOffset * 5, SIZE_SETTINGS_WIDTH - 40, 5, NULL, SS_ETCHEDHORZ);
+	HWND hwndBreakLine2 = CreateControl(WC_STATIC, NULL, 15, yOffset * 9, SIZE_SETTINGS_WIDTH - 40, 5, NULL, SS_ETCHEDHORZ);
 
 	// Color options names
-	HWND hwndTextColorTimer = CreateControl(WC_STATIC, L"Timer", xTitle, yOffset * 9, 150, 40);
-	HWND hwndTextColorSelectedTimer = CreateControl(WC_STATIC, L"Selected Timer", xTitle, yOffset * 10, 150, 40);
-	HWND hwndTextColorWinCon = CreateControl(WC_STATIC, L"Last 20 Seconds", xTitle, yOffset * 11, 150, 40);
-	HWND hwndTextColorBackground = CreateControl(WC_STATIC, L"Background", xTitle, yOffset * 12, 150, 40);
+	HWND hwndTextColorTimer = CreateControl(WC_STATIC, L"Timer", xTitle, yOffset * 11 - 20, 150, 40);
+	HWND hwndTextColorSelectedTimer = CreateControl(WC_STATIC, L"Selected Timer", xTitle, yOffset * 12 - 20, 150, 40);
+	HWND hwndTextColorWinCon = CreateControl(WC_STATIC, L"Last 20 Seconds", xTitle, yOffset * 13 - 20, 150, 40);
+	HWND hwndTextColorBackground = CreateControl(WC_STATIC, L"Background", xTitle, yOffset * 14 - 20, 150, 40);
 
 	// Copyright text
 	HWND hwndCopyright = CreateControl(WC_STATIC, L"© Truueh 2024", 10, SIZE_SETTINGS_HEIGHT - 65, 100, 40);
@@ -120,30 +124,37 @@ void SettingsWindow::InitializeButtonControls()
 	// preset values
 	int yOffset = 35;
 
-	int xHotkey = SIZE_SETTINGS_WIDTH / 2 + 50;
-	int xHotkeyCon = xHotkey + 70;
-	int xColorButton = xHotkeyCon - 80;
-	int widthHotkey = 25;
-	int heightHotkey = 25;
+	int xHotkey = SIZE_SETTINGS_WIDTH / 2 + 20;
+	int xHotkeyCon = xHotkey + 80;
+	int xColorButton = xHotkeyCon - 50;
+	int widthHotkey = 70;
+	int heightHotkey = 20;
 	int sizeCheckbox = 40;
+	int xCheckbox = SIZE_SETTINGS_WIDTH - 70;
 
-	// Hotkey buttons - Mouse
-	HWND hHotkeyStart = CreateControl(HOTKEY_CLASS, L"", xHotkey, yOffset * 2, widthHotkey, heightHotkey, CID_START);
-	HWND hHotkeyTimer1 = CreateControl(HOTKEY_CLASS, L"", xHotkey, yOffset * 3, widthHotkey, heightHotkey, CID_TIMER1);
-	HWND hHotkeyTimer2 = CreateControl(HOTKEY_CLASS, L"", xHotkey, yOffset * 4, widthHotkey, heightHotkey, CID_TIMER2);
-	HWND hCbTransparentBg = CreateControl(WC_BUTTON, L"", xHotkeyCon, yOffset * 5 - 10, sizeCheckbox, sizeCheckbox, CID_TRANSPARENT_CB, BS_CHECKBOX | BS_AUTOCHECKBOX);
-	HWND hCbClickthrough = CreateControl(WC_BUTTON, L"", xHotkeyCon, yOffset * 6 - 10, sizeCheckbox, sizeCheckbox, CID_CLICKTHROUGH, BS_CHECKBOX | BS_AUTOCHECKBOX);
+	HWND hotkeys[6];
+	HWND colorButtons[4];
 
-	// Hotkey buttons - Controller
-	HWND hHotkeyStartCon = CreateControl(HOTKEY_CLASS, L"", xHotkeyCon, yOffset * 2, widthHotkey, heightHotkey, -1);
-	HWND hHotkeyTimer1Con = CreateControl(HOTKEY_CLASS, L"", xHotkeyCon, yOffset * 3, widthHotkey, heightHotkey, -1);
-	HWND hHotkeyTimer2Con = CreateControl(HOTKEY_CLASS, L"", xHotkeyCon, yOffset * 4, widthHotkey, heightHotkey, -1);
+	// Hotkeys
+		// Mouse
+	hotkeys[0] = CreateControl(WC_BUTTON, L"", xHotkey, yOffset * 2, widthHotkey, heightHotkey, CID_START, BS_FLAT); // Start key
+	hotkeys[1] = CreateControl(WC_BUTTON, L"", xHotkey, yOffset * 3, widthHotkey, heightHotkey, CID_TIMER1, BS_FLAT); // Timer 1 key
+	hotkeys[2] = CreateControl(WC_BUTTON, L"", xHotkey, yOffset * 4, widthHotkey, heightHotkey, CID_TIMER2, BS_FLAT); // Timer 2 key
+
+		// Controller
+	hotkeys[3] = CreateControl(WC_BUTTON, L"test", xHotkeyCon, yOffset * 2, widthHotkey, heightHotkey, 0, BS_FLAT); // Start key
+	hotkeys[4] = CreateControl(WC_BUTTON, L"test", xHotkeyCon, yOffset * 3, widthHotkey, heightHotkey, 0, BS_FLAT); // Timer 1 key
+	hotkeys[5] = CreateControl(WC_BUTTON, L"test", xHotkeyCon, yOffset * 4, widthHotkey, heightHotkey, 0, BS_FLAT); // Timer 2 key
+
+	// Checkbox buttons
+	HWND hCbTransparentBg = CreateControl(WC_BUTTON, L"", xCheckbox, yOffset * 7 - 30, sizeCheckbox, sizeCheckbox, CID_TRANSPARENT_CB, BS_CHECKBOX | BS_AUTOCHECKBOX);
+	HWND hCbClickthrough = CreateControl(WC_BUTTON, L"", xCheckbox, yOffset * 8 - 30, sizeCheckbox, sizeCheckbox, CID_CLICKTHROUGH, BS_CHECKBOX | BS_AUTOCHECKBOX);
 
 	// Color buttons
-	HWND hwndButtonColorTimer = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 9, 90, 15, COLOR_CTR_TIMER, BS_OWNERDRAW);
-	HWND hwndButtonColorSelectedTimer = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 10, 90, 15, COLOR_CTR_SELECTED_TIMER, BS_OWNERDRAW);
-	HWND hwndButtonColorLastSeconds = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 11, 90, 15, COLOR_CTR_LAST_SECONDS, BS_OWNERDRAW);
-	HWND hwndButtonColorBackground = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 12, 90, 15, COLOR_CTR_BACKGROUND, BS_OWNERDRAW);
+	colorButtons[0] = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 11 - 20, 100, 15, COLOR_CTR_TIMER, BS_OWNERDRAW);
+	colorButtons[1] = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 12 - 20, 100, 15, COLOR_CTR_SELECTED_TIMER, BS_OWNERDRAW);
+	colorButtons[2] = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 13 - 20, 100, 15, COLOR_CTR_LAST_SECONDS, BS_OWNERDRAW);
+	colorButtons[3] = CreateControl(WC_BUTTON, L"", xColorButton, yOffset * 14 - 20, 100, 15, COLOR_CTR_BACKGROUND, BS_OWNERDRAW);
 
 	// Initialize exit controls
 	HWND hwndOKButton = CreateControl(WC_BUTTON, L"OK", SIZE_SETTINGS_WIDTH - 160, SIZE_SETTINGS_HEIGHT - 80, 50, 25, CID_OK);
@@ -151,11 +162,13 @@ void SettingsWindow::InitializeButtonControls()
 
 	// Apply font
 	SetControlsFont(m_hwnd);
+	
+	// Apply currently set hotkeys
+	for (HWND hCtrl : hotkeys) {
+		ApplyHotkeySavedKey(hCtrl);
+	}
 
-	// Apply current settings
-	SendMessage(hHotkeyStart, HKM_SETHOTKEY, appSettings.startKey, 0);
-	SendMessage(hHotkeyTimer1, HKM_SETHOTKEY, appSettings.timer1Key, 0);
-	SendMessage(hHotkeyTimer2, HKM_SETHOTKEY, appSettings.timer2Key, 0);
+	// Apply currently set options
 	SendMessage(hCbTransparentBg, BM_SETCHECK, appSettings.optionTransparent, 0);
 	SendMessage(hCbClickthrough, BM_SETCHECK, appSettings.clickthrough, 0);
 }
@@ -179,34 +192,49 @@ void SettingsWindow::HandleControlCommand(LPARAM lParam)
 {
 	HWND hwndCtrl = reinterpret_cast<HWND>(lParam); // clicked item handle
 	int controlID = GetDlgCtrlID(hwndCtrl); // retrieve control ID
-	WORD virtualKey = (WORD)SendMessage(hwndCtrl, HKM_GETHOTKEY, 0, 0); // Retrieve HOTKEY pressed
 
-	switch (controlID)
-	{
-	case CID_OK: // ok
+	// Clicked control
+	switch (controlID) {
+	// OK
+	case CID_OK:
 		ApplySettings(tempSettings);
 		SendMessage(GetWindow(m_hwnd, GW_OWNER), REFRESH_BRUSHES, 0, 0);
 		DestroyWindow(m_hwnd);
 		break;
-	case CID_CANCEL: // cancel
+		
+	// Cancel
+	case CID_CANCEL:
 		DestroyWindow(m_hwnd);
 		break;
-	case CID_START: // Start
-		tempSettings.startKey = virtualKey;
+
+	// Any hotkey control clicked
+	case CID_START:
+	case CID_TIMER1:
+	case CID_TIMER2:
+	{
+		if (hActiveControl) { // Reset currently selected control (before this control was clicked)
+			ApplyHotkeySavedKey(hActiveControl);
+			hActiveControl = nullptr;
+		}
+
+		SetFocus(m_hwnd);
+		hActiveControl = hwndCtrl;
+		SetWindowText(hActiveControl, L"...");
 		break;
-	case CID_TIMER1: // Timer 1
-		tempSettings.timer1Key = virtualKey;
-		break;
-	case CID_TIMER2: // Timer 2
-		tempSettings.timer2Key = virtualKey;
-		break;
-	case CID_TRANSPARENT_CB: // Transparent background checkbox
+	}
+
+	// Transparent background checkbox
+	case CID_TRANSPARENT_CB: 
 		tempSettings.optionTransparent = (Button_GetCheck(hwndCtrl) == BST_CHECKED);
 		break;
-	case CID_CLICKTHROUGH: // Clickthrough checkbox
+
+	// Clickthrough checkbox
+	case CID_CLICKTHROUGH:
 		tempSettings.clickthrough = (Button_GetCheck(hwndCtrl) == BST_CHECKED);
 		break;
-	case COLOR_CTR_TIMER: // Any color control clicked
+
+	// Any color control clicked
+	case COLOR_CTR_TIMER:
 	case COLOR_CTR_SELECTED_TIMER:
 	case COLOR_CTR_LAST_SECONDS:
 	case COLOR_CTR_BACKGROUND:
@@ -216,7 +244,7 @@ void SettingsWindow::HandleControlCommand(LPARAM lParam)
 		{
 			pColorPicker->controlID = controlID; // Notify Color Picker who called it
 			pColorPicker->pTempSettings = &tempSettings;
-
+		
 			if (!pColorPicker->Create(L"Color Picker", 850, 300, SIZE_COLORPICKER_WIDTH, SIZE_COLORPICKER_HEIGHT, 0, WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, m_hwnd, 0, NULL)) {
 				return;
 			}
@@ -258,6 +286,47 @@ void SettingsWindow::ColorHandles(LPARAM lParam)
 	}
 }
 
+void SettingsWindow::ApplyTempHotkey(UINT key) {
+	int controlID = GetDlgCtrlID(hActiveControl); // retrieve control ID
+
+	switch (controlID) {
+	case CID_START:
+		tempSettings.startKey = key;
+		break;
+	case CID_TIMER1:
+		tempSettings.timer1Key = key;
+		break;
+	case CID_TIMER2:
+		tempSettings.timer2Key = key;
+		break;
+	}
+
+	SetWindowText(hActiveControl, KeyboardMap[key]);
+	hActiveControl = nullptr;
+}
+
+void SettingsWindow::ApplyHotkeySavedKey(HWND hCtrl) {
+	int controlID = GetDlgCtrlID(hCtrl); // retrieve control ID
+
+	switch (controlID) {
+	case CID_START:
+		if (KeyboardMap.count(tempSettings.startKey)) { // Verify key exists
+			SetWindowText(hCtrl, KeyboardMap[tempSettings.startKey]);
+		}
+		break;
+	case CID_TIMER1:
+		if (KeyboardMap.count(tempSettings.timer1Key)) { // Verify key exists
+			SetWindowText(hCtrl, KeyboardMap[tempSettings.timer1Key]);
+		}
+		break;
+	case CID_TIMER2:
+		if (KeyboardMap.count(tempSettings.timer2Key)) { // Verify key exists
+			SetWindowText(hCtrl, KeyboardMap[tempSettings.timer2Key]);
+		}
+		break;
+	}
+}
+
 LRESULT SettingsWindow::HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
 	try
@@ -282,6 +351,25 @@ LRESULT SettingsWindow::HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 		}
 		case WM_PAINT:
 			DisplayBitmaps();
+			break;
+			//TEST
+		case WM_LBUTTONDOWN:
+			if (hActiveControl) {
+				ApplyHotkeySavedKey(hActiveControl);
+				hActiveControl = nullptr;
+			}
+			break;
+		case WM_KEYDOWN:
+			if (hActiveControl) {
+				UINT key = (UINT)wParam;
+				ApplyTempHotkey(key);
+			}
+			break;
+		case WM_SYSKEYDOWN: // Specifically ALT key
+			if (hActiveControl && (UINT)wParam == VK_MENU) {
+				UINT key = (UINT)wParam;
+				ApplyTempHotkey(key);
+			}
 			break;
 		}
 	}

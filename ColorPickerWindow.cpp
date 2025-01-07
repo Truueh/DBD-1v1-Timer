@@ -138,7 +138,7 @@ LRESULT ColorPickerWindow::HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam
 				FillRect(pDIS->hDC, &pDIS->rcItem, hBrushes[pDIS->CtlID]);
 			}
 
-			return TRUE;
+			return 0;
 		}
 		}
 	}

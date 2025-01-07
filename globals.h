@@ -25,8 +25,8 @@
 #define COLOR_PREVIEW				25
 
 // Global Sizes
-#define SIZE_SETTINGS_WIDTH		350
-#define SIZE_SETTINGS_HEIGHT	560
+#define SIZE_SETTINGS_WIDTH		400
+#define SIZE_SETTINGS_HEIGHT	590
 #define SIZE_COLORPICKER_WIDTH	270
 #define SIZE_COLORPICKER_HEIGHT	350
 
@@ -57,6 +57,7 @@ struct settingsStruct
 };
 
 // Variables
+extern HINSTANCE hInstanceGlobal;
 extern HBRUSH hBrushes[25];
 extern settingsStruct appSettings;
 extern HWND hwndMainWindow;
