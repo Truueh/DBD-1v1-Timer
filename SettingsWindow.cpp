@@ -352,7 +352,6 @@ LRESULT SettingsWindow::HandleMessage(UINT wMsg, WPARAM wParam, LPARAM lParam)
 		case WM_PAINT:
 			DisplayBitmaps();
 			break;
-			//TEST
 		case WM_LBUTTONDOWN:
 			if (hActiveControl) {
 				ApplyHotkeySavedKey(hActiveControl);

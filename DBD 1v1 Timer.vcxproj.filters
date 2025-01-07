@@ -111,12 +111,6 @@
     <Image Include="..\concept\ControllerIcon.bmp">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="..\concept\MouseIconLowRes.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="..\concept\ControllerIconLowRes.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <None Include="settings.json">

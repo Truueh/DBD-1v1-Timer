@@ -19,8 +19,6 @@
 
 #pragma comment(lib, "Msimg32.lib")
 #pragma comment (lib, "d2d1")
-#pragma comment(lib, "Dinput8.lib")
-#pragma comment(lib, "dxguid.lib")
 
 using std::thread; using std::wstring;
 
@@ -50,20 +48,30 @@ void KillProgram()
 
 LRESULT CALLBACK KBHook(int nCode, WPARAM wParam, LPARAM lParam)
 {
-	if (wParam == WM_KEYUP && pGlobalTimerWindow != NULL && appSettings.startKey != NULL)
+	if (wParam == WM_KEYDOWN && pGlobalTimerWindow != NULL && appSettings.startKey != NULL)
 	{
 		KBDLLHOOKSTRUCT* pKbdHookStruct = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
 		const int startKey = appSettings.startKey;
+		int hitKey = pKbdHookStruct->vkCode;
 
-		if (pKbdHookStruct->vkCode == appSettings.startKey)
+		// If the hit key is Alt or Control, set it to not matter if it was right or left.
+		if (hitKey == VK_LMENU || hitKey == VK_RMENU) {
+			hitKey = VK_MENU;
+		}
+		else if (hitKey == VK_LCONTROL || hitKey == VK_RCONTROL) {
+			hitKey = VK_CONTROL;
+		}
+
+		// Take action according to hit hotkey
+		if (hitKey == appSettings.startKey)
 		{
 			pGlobalTimerWindow->HandleHotKey(KEY_START);
 		}
-		else if (pKbdHookStruct->vkCode == appSettings.timer1Key)
+		else if (hitKey == appSettings.timer1Key)
 		{
 			pGlobalTimerWindow->HandleHotKey(KEY_TIMER1);
 		}
-		else if (pKbdHookStruct->vkCode == appSettings.timer2Key)
+		else if (hitKey == appSettings.timer2Key)
 		{
 			pGlobalTimerWindow->HandleHotKey(KEY_TIMER2);
 		}
@@ -120,12 +128,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 		// Create a thread for the app loop (ticks)
 		thread t1(AppLoop, &win);
-
-		// ********* TESTING GAMEPAD CLASS ****************** //
-
-		
-
-		// ********* TESTING GAMEPAD CLASS ****************** //
 
 		// Handle messages
 		MSG msg = { };
